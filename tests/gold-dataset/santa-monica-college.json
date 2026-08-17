@@ -1,0 +1,13 @@
+{
+  "resource": {
+    "title": "Santa Monica college",
+    "type": "webpage",
+    "creator": "Santa Monica College",
+    "description": "A school area containing transfer planning, education plan work, grading, scholarship planning, archived college resources, and university transfer preparation."
+  },
+  "expected": {
+    "areas": [],
+    "topics": [],
+    "projects": ["Complete University Transfer Application"]
+  }
+}

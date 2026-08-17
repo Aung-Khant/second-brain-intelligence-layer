@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "Web developing roadmaps",
+    "url": "https://www.mindmeister.com/app/map/3362771198",
+    "type": "webpage",
+    "creator": "MindMeister",
+    "description": "A web development learning roadmap for understanding possible paths through frontend, backend, and broader software development skills."
+  },
+  "expected": {
+    "areas": ["Computer Science"],
+    "topics": [],
+    "projects": []
+  }
+}

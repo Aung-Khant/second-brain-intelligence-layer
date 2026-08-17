@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "The first 20 hours -- how to learn anything | Josh Kaufman | TEDxCSU",
+    "url": "https://youtu.be/5MgBikgcWnY",
+    "type": "youtube_video",
+    "creator": "Josh Kaufman",
+    "description": "A TEDx talk about acquiring skills quickly by deconstructing the skill, learning enough to self-correct, removing practice barriers, and practicing for 20 focused hours."
+  },
+  "expected": {
+    "areas": ["Cognitive Science"],
+    "topics": ["Memory"],
+    "projects": []
+  }
+}

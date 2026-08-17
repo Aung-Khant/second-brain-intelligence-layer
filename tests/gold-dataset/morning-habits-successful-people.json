@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "Morning Habits for Successful People",
+    "url": "https://www.forbes.com/sites/carolinecastrillon/2020/12/13/5-morning-habits-of-highly-successful-people/?sh=5d1885225ec6",
+    "type": "article",
+    "creator": "Forbes",
+    "description": "An article about morning routines, habits, productivity, attention, and personal effectiveness."
+  },
+  "expected": {
+    "areas": ["Cognitive Science"],
+    "topics": [],
+    "projects": []
+  }
+}

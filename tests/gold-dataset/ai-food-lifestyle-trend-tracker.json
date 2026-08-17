@@ -1,0 +1,13 @@
+{
+  "resource": {
+    "title": "AI Food & Lifestyle Trend Tracker",
+    "type": "article",
+    "creator": "Personal project idea",
+    "description": "A project idea where AI recognizes food or drinks from photos, saves data, and analyzes lifestyle or consumption trends."
+  },
+  "expected": {
+    "areas": ["Computer Science", "Business"],
+    "topics": ["Computer Vision"],
+    "projects": []
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "Second Brain PARA-Thiago Forte",
+    "url": "https://www.youtube.com/watch?v=vZr18_aOY6I",
+    "type": "youtube_video",
+    "creator": "Tiago Forte",
+    "description": "A video about the PARA method and organizing a second brain with projects, areas, resources, and archives."
+  },
+  "expected": {
+    "areas": ["Cognitive Science"],
+    "topics": ["Memory"],
+    "projects": []
+  }
+}

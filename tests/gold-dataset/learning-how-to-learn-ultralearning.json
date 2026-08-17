@@ -1,0 +1,13 @@
+{
+  "resource": {
+    "title": "Learning how to learn (Ultra learning)",
+    "type": "youtube_video",
+    "creator": "Andrew Huberman Lab",
+    "description": "A learning framework covering meta-learning, focus, directness, drills, retrieval practice, feedback, retention, intuition, and experimentation."
+  },
+  "expected": {
+    "areas": ["Cognitive Science"],
+    "topics": ["Memory"],
+    "projects": []
+  }
+}

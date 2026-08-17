@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "Excel in Mathematics, Physics, and Chemistry | Siyavula",
+    "url": "https://www.siyavula.com/",
+    "type": "webpage",
+    "creator": "Siyavula",
+    "description": "Open textbooks, practice questions, step-by-step solutions, and learning tools for mathematics, physics, and chemistry."
+  },
+  "expected": {
+    "areas": ["Mathematics"],
+    "topics": [],
+    "projects": []
+  }
+}

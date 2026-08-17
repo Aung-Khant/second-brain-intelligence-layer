@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "How to Invest for Beginners",
+    "url": "https://www.youtube.com/watch?v=lNdOtlpmH5U",
+    "type": "youtube_video",
+    "creator": "Saved YouTube resource",
+    "description": "A beginner-friendly investing video about personal finance, markets, investing basics, and long-term money decisions."
+  },
+  "expected": {
+    "areas": [],
+    "topics": [],
+    "projects": []
+  }
+}

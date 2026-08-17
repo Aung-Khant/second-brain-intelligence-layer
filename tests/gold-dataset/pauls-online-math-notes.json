@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "Pauls Online Math Notes",
+    "url": "https://tutorial.math.lamar.edu/",
+    "type": "webpage",
+    "creator": "Paul Dawkins",
+    "description": "Free online mathematics notes and tutorials for algebra, calculus, differential equations, common math errors, and how to study math."
+  },
+  "expected": {
+    "areas": ["Mathematics"],
+    "topics": ["Linear Algebra"],
+    "projects": []
+  }
+}

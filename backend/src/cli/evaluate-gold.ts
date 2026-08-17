@@ -2,7 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { classifyResource } from "../ai/classify-resource.js";
 import { mockTaxonomy } from "../retrieval/mock-taxonomy.js";
+import { assertTaxonomy } from "../../../shared/schemas/validation.js";
 import type { ResourceType } from "../../../shared/types/resource.js";
+import type { Taxonomy } from "../../../shared/types/taxonomy.js";
 
 type GoldFixture = {
   resource: {
@@ -23,6 +25,7 @@ type GoldFixture = {
 type RelationshipKind = keyof GoldFixture["expected"];
 
 const datasetDir = join(process.cwd(), "tests", "gold-dataset");
+const taxonomy = await readEvaluationTaxonomy();
 const files = (await readdir(datasetDir)).filter((file) => file.endsWith(".json")).sort();
 const results = [];
 let expectedFound = 0;
@@ -33,7 +36,7 @@ for (const file of files) {
   const fixture = JSON.parse(await readFile(join(datasetDir, file), "utf8")) as GoldFixture;
   const classified = classifyResource({
     resource: fixture.resource,
-    taxonomy: mockTaxonomy
+    taxonomy
   });
 
   const result = {
@@ -78,4 +81,19 @@ function compareRelationshipSet(expected: string[], actual: string[]) {
     expectedMissed: expected.filter((name) => !actualSet.has(name)),
     unexpectedAdded: actual.filter((name) => !expectedSet.has(name))
   };
+}
+
+async function readEvaluationTaxonomy(): Promise<Taxonomy> {
+  const taxonomyPath = join(process.cwd(), "tests", "fixtures", "evaluation-taxonomy.json");
+
+  try {
+    const taxonomy = JSON.parse(await readFile(taxonomyPath, "utf8")) as unknown;
+    assertTaxonomy(taxonomy);
+    return taxonomy;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return mockTaxonomy;
+    }
+    throw error;
+  }
 }

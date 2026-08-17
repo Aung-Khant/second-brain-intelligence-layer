@@ -1,0 +1,13 @@
+{
+  "resource": {
+    "title": "Zero to One",
+    "type": "article",
+    "creator": "Peter Thiel",
+    "description": "Book notes about startup strategy, monopoly, contrarian thinking, creating new value, capturing value, and building a durable business."
+  },
+  "expected": {
+    "areas": ["Business"],
+    "topics": [],
+    "projects": []
+  }
+}

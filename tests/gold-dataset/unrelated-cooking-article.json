@@ -1,0 +1,13 @@
+{
+  "resource": {
+    "title": "How to Make Tomato Soup",
+    "type": "article",
+    "creator": "Kitchen Notes",
+    "description": "A recipe about tomatoes, onions, stock, simmering, seasoning, and serving soup."
+  },
+  "expected": {
+    "areas": [],
+    "topics": [],
+    "projects": []
+  }
+}

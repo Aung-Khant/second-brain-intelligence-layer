@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "University Transfer Application Checklist",
+    "type": "webpage",
+    "creator": "Admissions Guide",
+    "description": "A checklist for finishing a university transfer application, essays, deadlines, recommendations, and submission requirements."
+  },
+  "expected": {
+    "areas": [],
+    "topics": [],
+    "projects": ["Complete University Transfer Application"]
+  }
+}
+

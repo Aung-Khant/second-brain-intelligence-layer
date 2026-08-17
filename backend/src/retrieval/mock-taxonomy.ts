@@ -12,7 +12,7 @@ export const mockTaxonomy: Taxonomy = {
       id: "area-cs",
       name: "Computer Science",
       definition:
-        "Computer science, software, algorithms, programming, computation, artificial intelligence, and technical systems."
+        "Computer science, software, algorithms, programming, computation, artificial intelligence, machine learning, computer vision, image recognition, Python, and technical systems."
     },
     {
       id: "area-business",
@@ -24,7 +24,7 @@ export const mockTaxonomy: Taxonomy = {
       id: "area-cogsci",
       name: "Cognitive Science",
       definition:
-        "Cognitive science, learning, memory, attention, perception, reasoning, language, and human cognition."
+        "Cognitive science, learning, memory, attention, perception, reasoning, language, speech, pronunciation, spoken audio, and human cognition."
     }
   ],
   topics: [
@@ -56,7 +56,7 @@ export const mockTaxonomy: Taxonomy = {
       id: "topic-math-visualization",
       name: "Mathematical Visualization",
       definition:
-        "Visual explanation, visual explanations, visuals, animations, animated intuition, matrices, transformations, eigenvectors, diagrams, and geometry for explaining abstract mathematics.",
+        "Visual explanation, visual explanations, visuals, animations, animated intuition, mathematical videos, explanatory animations, matrices, transformations, eigenvectors, diagrams, and geometry for explaining abstract mathematics.",
       areas: ["Mathematics"]
     }
   ],

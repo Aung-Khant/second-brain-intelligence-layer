@@ -1,0 +1,14 @@
+{
+  "resource": {
+    "title": "Detecting Pronunciation Mistakes with AI",
+    "type": "article",
+    "creator": "Speech AI Lab",
+    "description": "A technical article about pronunciation, spoken audio, machine learning systems, and detecting pronunciation mistakes."
+  },
+  "expected": {
+    "areas": ["Computer Science", "Cognitive Science"],
+    "topics": [],
+    "projects": ["Build Pronunciation Error Detector"]
+  }
+}
+

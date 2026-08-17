@@ -25,6 +25,9 @@ type RelationshipKind = keyof GoldFixture["expected"];
 const datasetDir = join(process.cwd(), "tests", "gold-dataset");
 const files = (await readdir(datasetDir)).filter((file) => file.endsWith(".json")).sort();
 const results = [];
+let expectedFound = 0;
+let expectedMissed = 0;
+let unexpectedAdded = 0;
 
 for (const file of files) {
   const fixture = JSON.parse(await readFile(join(datasetDir, file), "utf8")) as GoldFixture;
@@ -43,10 +46,28 @@ for (const file of files) {
     )
   };
 
+  for (const kind of ["areas", "topics", "projects"] satisfies RelationshipKind[]) {
+    expectedFound += result[kind].expectedFound.length;
+    expectedMissed += result[kind].expectedMissed.length;
+    unexpectedAdded += result[kind].unexpectedAdded.length;
+  }
+
   results.push(result);
 }
 
-process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
+const summary = {
+  fixtures: files.length,
+  expectedFound,
+  expectedMissed,
+  unexpectedAdded,
+  passed: expectedMissed === 0 && unexpectedAdded === 0
+};
+
+process.stdout.write(`${JSON.stringify({ summary, results }, null, 2)}\n`);
+
+if (!summary.passed) {
+  process.exitCode = 1;
+}
 
 function compareRelationshipSet(expected: string[], actual: string[]) {
   const actualSet = new Set(actual);
@@ -58,4 +79,3 @@ function compareRelationshipSet(expected: string[], actual: string[]) {
     unexpectedAdded: actual.filter((name) => !expectedSet.has(name))
   };
 }
-

@@ -2,55 +2,96 @@
   "areas": [
     {
       "id": "area-math",
-      "name": "Mathematics",
+      "name": "Mathematics & Science",
       "definition": "Mathematics, math learning, algebra, calculus, differential equations, physics and chemistry foundations, quantitative reasoning, mathematical explanations, and mathematical communication."
     },
     {
       "id": "area-cs",
-      "name": "Computer Science",
-      "definition": "Computer science, software development, web development, frontend, backend, programming, C++, Python, APIs, data, artificial intelligence, AI systems, GPT applications, AI language learning applications, English speaking practice software, machine learning, computer vision, image recognition, recognizing photos, and technical systems."
+      "name": "Computer Science & AI",
+      "definition": "Computer science, software development, web development, frontend, backend, programming, C++, Python, APIs, data, artificial intelligence, AI systems, GPT applications, AI language learning applications, English speaking practice software, machine learning, computer vision, image recognition, recognizing photos, computational neuroscience, neural systems, and technical systems."
     },
     {
       "id": "area-business",
-      "name": "Business",
+      "name": "Business & Entrepreneurship",
       "definition": "Business, startup strategy, product ideas, markets, customers, company building, trend tracking, lifestyle trend analysis, creating value, and durable businesses."
     },
     {
+      "id": "area-finance",
+      "name": "Finance & Investing",
+      "definition": "Finance, investing, personal finance, stock portfolio, markets, money decisions, long-term wealth, and investment learning."
+    },
+    {
       "id": "area-cogsci",
-      "name": "Cognitive Science",
-      "definition": "Cognitive science, neuroscience, learning, skill acquisition, memory, habits, productivity, attention, focus, retrieval practice, retention, intuition, language learning, communication, pronunciation, speaking practice, second brain, PARA, and organizing knowledge."
+      "name": "Learning & Cognitive Science",
+      "definition": "Cognitive science, neuroscience, learning, skill acquisition, memory, habits, productivity, attention, focus, focused practice, practice, self-correction, feedback, retrieval practice, retention, meta-learning, intuition, language learning, communication, pronunciation, speaking practice, second brain, PARA, and organizing knowledge."
     }
   ],
   "topics": [
     {
       "id": "topic-linear-algebra",
       "name": "Linear Algebra",
-      "definition": "Linear algebra, algebra, vectors, matrices, transformations, eigenvectors, eigenspaces, math notes, online math tutorials, and visual mathematical intuition.",
-      "areas": ["Mathematics"]
+      "definition": "Linear algebra, algebra, vectors, matrices, transformations, eigenvectors, eigenspaces, math notes, online math tutorials, calculus, differential equations, and visual mathematical intuition.",
+      "areas": ["Mathematics & Science"]
     },
     {
       "id": "topic-manim",
       "name": "Manim",
       "definition": "Manim, Python animation engine, mathematical videos, explanatory animations, and precise mathematical animation.",
-      "areas": ["Mathematics", "Computer Science"]
+      "areas": ["Mathematics & Science", "Computer Science & AI"]
     },
     {
       "id": "topic-memory",
       "name": "Memory",
-      "definition": "Memory, learning, skill acquisition, practice, retrieval practice, retention, focus, attention, habits, second brain, PARA, organizing knowledge, neural systems, and neuroscience.",
-      "areas": ["Cognitive Science"]
+      "definition": "Memory, learning, skill acquisition, practice, focused practice, retrieval practice, retention, feedback, focus, attention, habits, second brain, PARA, organizing knowledge, neural systems, and neuroscience.",
+      "areas": ["Learning & Cognitive Science"]
     },
     {
       "id": "topic-computer-vision",
       "name": "Computer Vision",
       "definition": "Computer vision, image recognition, machine perception, video analysis, visual understanding, recognizing objects in photos, recognizing food or drinks from photos, and AI photo analysis.",
-      "areas": ["Computer Science"]
+      "areas": ["Computer Science & AI"]
     },
     {
       "id": "topic-math-visualization",
       "name": "Mathematical Visualization",
       "definition": "Mathematical visualization, visual explanation, visual explanations, mathematical explanations, mathematical videos, explanatory animations, diagrams, geometry, animated intuition, brain function explanations, matrices, transformations, and eigenvectors.",
-      "areas": ["Mathematics"]
+      "areas": ["Mathematics & Science"]
+    },
+    {
+      "id": "topic-pronunciation",
+      "name": "Pronunciation",
+      "definition": "Pronunciation, English speaking practice, language learning, communication skill development, spoken audio, and pronunciation improvement.",
+      "areas": ["Language & Communication"]
+    },
+    {
+      "id": "topic-python",
+      "name": "Python",
+      "definition": "Python programming, Python learning, APIs, modules, file handling, Pandas, web scraping, and software development.",
+      "areas": ["Computer Science & AI"]
+    },
+    {
+      "id": "topic-web-development",
+      "name": "Web Development",
+      "definition": "Web development, frontend, backend, roadmaps, software development skills, APIs, and web application learning.",
+      "areas": ["Computer Science & AI"]
+    },
+    {
+      "id": "topic-second-brain",
+      "name": "Second Brain",
+      "definition": "Second Brain, PARA method, personal knowledge management, knowledge organization systems, and organizing a second brain.",
+      "areas": ["Learning & Cognitive Science"]
+    },
+    {
+      "id": "topic-business",
+      "name": "Business",
+      "definition": "Business, startup strategy, entrepreneurship, products, markets, company building, and durable value.",
+      "areas": ["Business & Entrepreneurship"]
+    },
+    {
+      "id": "topic-productivity",
+      "name": "Productivity",
+      "definition": "Productivity, habits, routines, attention, personal effectiveness, and work systems.",
+      "areas": ["Learning & Cognitive Science"]
     }
   ],
   "projects": [
@@ -58,7 +99,7 @@
       "id": "project-eigenvector-animation",
       "name": "Create Eigenvector Animation",
       "goal": "Create a clear visual explanation of eigenvectors and linear transformations.",
-      "areas": ["Mathematics"],
+      "areas": ["Mathematics & Science"],
       "topics": ["Linear Algebra", "Mathematical Visualization"],
       "status": "active"
     },
@@ -66,7 +107,7 @@
       "id": "project-pronunciation-detector",
       "name": "Build Pronunciation Error Detector",
       "goal": "Build a system that detects pronunciation mistakes from spoken audio and supports English speaking practice, pronunciation improvement, language learning, and communication skill development.",
-      "areas": ["Computer Science", "Cognitive Science"],
+      "areas": ["Computer Science & AI", "Learning & Cognitive Science"],
       "topics": [],
       "status": "active"
     },

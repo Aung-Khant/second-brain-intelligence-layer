@@ -7,7 +7,7 @@
     "description": "Free online mathematics notes and tutorials for algebra, calculus, differential equations, common math errors, and how to study math."
   },
   "expected": {
-    "areas": ["Mathematics"],
+    "areas": ["Mathematics & Science"],
     "topics": ["Linear Algebra"],
     "projects": []
   }

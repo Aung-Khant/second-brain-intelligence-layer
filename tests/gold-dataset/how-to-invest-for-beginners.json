@@ -7,7 +7,7 @@
     "description": "A beginner-friendly investing video about personal finance, markets, investing basics, and long-term money decisions."
   },
   "expected": {
-    "areas": [],
+    "areas": ["Finance & Investing"],
     "topics": [],
     "projects": []
   }

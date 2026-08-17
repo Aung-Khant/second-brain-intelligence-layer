@@ -6,8 +6,8 @@
     "description": "A personal profile entry about using AI for language learning, English speaking practice, pronunciation improvement, and communication skill development."
   },
   "expected": {
-    "areas": ["Computer Science", "Cognitive Science"],
-    "topics": [],
+    "areas": ["Computer Science & AI", "Learning & Cognitive Science"],
+    "topics": ["Pronunciation"],
     "projects": ["Build Pronunciation Error Detector"]
   }
 }

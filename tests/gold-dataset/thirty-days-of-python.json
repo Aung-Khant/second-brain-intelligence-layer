@@ -7,8 +7,8 @@
     "description": "A 30-day Python learning curriculum covering variables, functions, modules, regular expressions, file handling, web scraping, APIs, Pandas, and building APIs."
   },
   "expected": {
-    "areas": ["Computer Science"],
-    "topics": [],
+    "areas": ["Computer Science & AI"],
+    "topics": ["Python"],
     "projects": []
   }
 }

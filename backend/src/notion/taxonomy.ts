@@ -84,6 +84,7 @@ function toProject(
     name,
     goal: [
       name,
+      getRichText(properties, "Definition"),
       getRichText(properties, "Goal"),
       getRichText(properties, "Problem"),
       getRichText(properties, "Description")
@@ -104,4 +105,3 @@ function normalizeProjectStatus(status: string | undefined, archived: boolean): 
 function isPresent<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
-

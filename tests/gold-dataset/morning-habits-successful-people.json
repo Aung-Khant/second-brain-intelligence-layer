@@ -7,8 +7,8 @@
     "description": "An article about morning routines, habits, productivity, attention, and personal effectiveness."
   },
   "expected": {
-    "areas": ["Cognitive Science"],
-    "topics": [],
+    "areas": ["Learning & Cognitive Science"],
+    "topics": ["Productivity"],
     "projects": []
   }
 }

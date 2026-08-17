@@ -6,7 +6,7 @@
     "description": "Study notes for C++ fundamentals including variables, data types, strings, numbers, input, arrays, functions, conditionals, loops, classes, and object-oriented programming."
   },
   "expected": {
-    "areas": ["Computer Science"],
+    "areas": ["Computer Science & AI"],
     "topics": [],
     "projects": []
   }

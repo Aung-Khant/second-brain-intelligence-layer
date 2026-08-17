@@ -7,7 +7,7 @@
     "description": "A YouTube channel exploring neuroscience, learning, neural systems, memory, computational neuroscience, and mathematical explanations of brain function."
   },
   "expected": {
-    "areas": ["Cognitive Science", "Computer Science", "Mathematics"],
+    "areas": ["Learning & Cognitive Science", "Computer Science & AI", "Mathematics & Science"],
     "topics": ["Memory", "Mathematical Visualization"],
     "projects": []
   }

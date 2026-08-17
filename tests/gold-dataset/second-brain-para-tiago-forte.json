@@ -7,8 +7,8 @@
     "description": "A video about the PARA method and organizing a second brain with projects, areas, resources, and archives."
   },
   "expected": {
-    "areas": ["Cognitive Science"],
-    "topics": ["Memory"],
+    "areas": ["Learning & Cognitive Science"],
+    "topics": ["Memory", "Second Brain"],
     "projects": []
   }
 }

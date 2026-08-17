@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Second Brain Capture",
+  "version": "0.1.0",
+  "description": "Classify the current page and save confirmed resources into Notion.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Second Brain Capture"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["http://127.0.0.1:3737/*", "http://localhost:3737/*"]
+}

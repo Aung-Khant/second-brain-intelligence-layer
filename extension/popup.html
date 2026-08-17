@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Second Brain Capture</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Second Brain</h1>
+          <p id="pageHost">Ready</p>
+        </div>
+        <span id="serverState" class="pill">Local</span>
+      </header>
+
+      <section class="resource">
+        <label for="resourceTitle">Title</label>
+        <input id="resourceTitle" type="text" autocomplete="off">
+
+        <label for="resourceUrl">URL</label>
+        <input id="resourceUrl" type="url" autocomplete="off">
+      </section>
+
+      <section class="actions">
+        <button id="classifyButton" type="button">Classify</button>
+        <button id="saveButton" type="button" disabled>Save</button>
+      </section>
+
+      <p id="status" class="status">Open a page, then classify it.</p>
+
+      <section id="summarySection" class="summary" hidden>
+        <h2>Summary</h2>
+        <p id="summary"></p>
+      </section>
+
+      <section id="relationsSection" class="relations" hidden>
+        <div class="field">
+          <label for="saveIntent">Save Intent</label>
+          <select id="saveIntent">
+            <option value="learn">Learn</option>
+            <option value="use_for_project">Use for Project</option>
+            <option value="research">Research</option>
+            <option value="reference">Reference</option>
+            <option value="content_inspiration">Content Inspiration</option>
+            <option value="explore_later">Explore Later</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="whySaved">Why Saved</label>
+          <textarea id="whySaved" rows="3" placeholder="Optional"></textarea>
+        </div>
+
+        <div class="relationGroup">
+          <h2>Areas</h2>
+          <div id="areasList" class="relationList"></div>
+        </div>
+
+        <div class="relationGroup">
+          <h2>Topics</h2>
+          <div id="topicsList" class="relationList"></div>
+        </div>
+
+        <div class="relationGroup">
+          <h2>Projects</h2>
+          <div id="projectsList" class="relationList"></div>
+        </div>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

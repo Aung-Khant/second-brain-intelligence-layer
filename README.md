@@ -10,8 +10,9 @@ This milestone intentionally implements only:
 - relationship classification
 - structured output validation
 - CLI/test harness
-
-It does not include the Chrome extension or Notion writes yet.
+- Notion taxonomy reads
+- confirmed Resource saves into Notion
+- local Chrome extension MVP
 
 ## Setup
 
@@ -66,3 +67,35 @@ npm run evaluate:notion
 ```
 
 If `evaluate:notion` fails, that usually means the gold fixture expectations and your real Notion taxonomy use different labels or the Notion entries need richer definitions.
+
+## Save A Resource Into Notion
+
+Dry-run a Resource save without creating a Notion page:
+
+```bash
+npm run save:notion -- tests/fixtures/save-resource.json
+```
+
+Create the Resource only after reviewing the payload:
+
+```bash
+npm run save:notion -- tests/fixtures/save-resource.json --confirm-write
+```
+
+## Run The Extension MVP
+
+Start the local API server:
+
+```bash
+npm run server
+```
+
+Then load the extension in Chrome:
+
+1. Open `chrome://extensions`.
+2. Turn on Developer mode.
+3. Choose Load unpacked.
+4. Select the `extension` folder in this repo.
+5. Open a normal web page, click the extension, classify, review, and save.
+
+The extension talks to `http://127.0.0.1:3737`, so keep `npm run server` running while using it.

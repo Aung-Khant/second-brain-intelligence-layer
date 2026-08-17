@@ -10,7 +10,9 @@ const elements = {
   serverState: document.querySelector("#serverState"),
   resourceTitle: document.querySelector("#resourceTitle"),
   resourceUrl: document.querySelector("#resourceUrl"),
+  resourceType: document.querySelector("#resourceType"),
   classifyButton: document.querySelector("#classifyButton"),
+  enhanceButton: document.querySelector("#enhanceButton"),
   saveButton: document.querySelector("#saveButton"),
   status: document.querySelector("#status"),
   summarySection: document.querySelector("#summarySection"),
@@ -29,6 +31,7 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
   await hydrateCurrentPage();
   elements.classifyButton.addEventListener("click", classifyCurrentPage);
+  elements.enhanceButton.addEventListener("click", enhanceCurrentPage);
   elements.saveButton.addEventListener("click", saveCurrentPage);
   checkServer();
 });
@@ -51,6 +54,7 @@ async function hydrateCurrentPage() {
 
     elements.resourceTitle.value = state.page.title;
     elements.resourceUrl.value = state.page.url;
+    elements.resourceType.value = resourceTypeLabel(inferResourceType(state.page.url));
     elements.pageHost.textContent = hostFromUrl(state.page.url);
   } catch (error) {
     setStatus(error.message, true);
@@ -82,18 +86,37 @@ async function checkServer() {
 
 async function classifyCurrentPage() {
   setBusy(true);
-  setStatus("Classifying with your Notion taxonomy...");
+  setStatus("Matching with your Notion taxonomy...");
 
   try {
     const resource = buildTrustedResource();
     const response = await postJson("/api/classify", { resource });
     state.classification = response.classification;
     renderClassification(response.classification);
+    elements.enhanceButton.disabled = false;
+    elements.saveButton.disabled = false;
+    setStatus("Fast local match ready. Use AI Enhance only if needed.");
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function enhanceCurrentPage() {
+  setBusy(true);
+  setStatus("Enhancing with AI...");
+
+  try {
+    const resource = buildTrustedResource();
+    const response = await postJson("/api/enhance", { resource });
+    state.classification = mergePreservingManualSelections(response.classification);
+    renderClassification(state.classification);
     elements.saveButton.disabled = false;
     setStatus(
       response.fallback
         ? "AI was unavailable, so local matching was used."
-        : "Review the matches, then save."
+        : "AI enhanced. Review, then save."
     );
   } catch (error) {
     setStatus(error.message, true);
@@ -134,9 +157,13 @@ async function saveCurrentPage() {
 }
 
 function buildTrustedResource() {
+  const url = elements.resourceUrl.value.trim();
+  const type = inferResourceType(url);
+  elements.resourceType.value = resourceTypeLabel(type);
+
   return {
-    url: elements.resourceUrl.value.trim(),
-    type: inferResourceType(elements.resourceUrl.value),
+    url,
+    type,
     title: elements.resourceTitle.value.trim(),
     description: state.page?.description ?? "",
     visibleText: state.page?.visibleText ?? ""
@@ -144,10 +171,13 @@ function buildTrustedResource() {
 }
 
 function buildConfirmedResource() {
+  const type = inferResourceType(elements.resourceUrl.value);
+  elements.resourceType.value = resourceTypeLabel(type);
+
   return {
     name: elements.resourceTitle.value.trim(),
     url: elements.resourceUrl.value.trim(),
-    resourceType: inferResourceType(elements.resourceUrl.value),
+    resourceType: type,
     summary: state.classification.summary,
     areaIds: selectedIds("areas"),
     topicIds: selectedIds("topics"),
@@ -155,6 +185,24 @@ function buildConfirmedResource() {
     saveIntent: elements.saveIntent.value,
     whySaved: elements.whySaved.value.trim() || undefined
   };
+}
+
+function mergePreservingManualSelections(nextClassification) {
+  if (!state.classification) return nextClassification;
+
+  return {
+    ...nextClassification,
+    areas: preserveSelectedRelations(nextClassification.areas, "areas"),
+    topics: preserveSelectedRelations(nextClassification.topics, "topics"),
+    projects: preserveSelectedRelations(nextClassification.projects, "projects")
+  };
+}
+
+function preserveSelectedRelations(nextRelations, kind) {
+  const selected = new Set(selectedIds(kind));
+  return nextRelations.map((relation) =>
+    selected.has(relation.entityId) ? { ...relation, state: "preselected" } : relation
+  );
 }
 
 function selectedIds(kind) {
@@ -370,10 +418,24 @@ function hostFromUrl(url) {
 
 function setBusy(isBusy) {
   elements.classifyButton.disabled = isBusy;
+  elements.enhanceButton.disabled = isBusy || !state.classification;
   elements.saveButton.disabled = isBusy || !state.classification;
 }
 
 function setStatus(message, isError = false) {
   elements.status.textContent = message;
   elements.status.style.color = isError ? "#b91c1c" : "#64748b";
+}
+
+function resourceTypeLabel(type) {
+  switch (type) {
+    case "youtube_channel":
+      return "YouTube Channel";
+    case "youtube_video":
+      return "YouTube Video";
+    case "article":
+      return "Article";
+    default:
+      return "Webpage";
+  }
 }

@@ -30,6 +30,8 @@ export type ClassifyApiResponse = {
   };
 };
 
+export type EnhanceApiResponse = ClassifyApiResponse;
+
 export type SaveApiRequest = {
   resource: ConfirmedResource;
   aiSuggestion?: {
@@ -63,6 +65,18 @@ export type CreateTopicApiResponse = {
 export async function classifyWithNotionTaxonomy(
   input: ClassifyApiRequest
 ): Promise<ClassifyApiResponse> {
+  assertTrustedResourceInput(input.resource);
+
+  const taxonomy = await fetchNotionTaxonomy();
+  return {
+    resource: input.resource,
+    classification: classifyLocal(input.resource, taxonomy)
+  };
+}
+
+export async function enhanceClassificationWithAi(
+  input: ClassifyApiRequest
+): Promise<EnhanceApiResponse> {
   assertTrustedResourceInput(input.resource);
 
   const taxonomy = await fetchNotionTaxonomy();

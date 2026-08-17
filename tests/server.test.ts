@@ -31,3 +31,44 @@ test("unknown endpoint returns a structured error", async () => {
     }
   });
 });
+
+test("classify endpoint uses local matching for instant results", async () => {
+  const previousEnv = { ...process.env };
+  const previousFetch = globalThis.fetch;
+
+  process.env.AI_PROVIDER = "openrouter";
+  process.env.OPENROUTER_API_KEY = "test-openrouter-key";
+  process.env.NOTION_API_KEY = "test-notion-key";
+  process.env.NOTION_TAXONOMY_CACHE_TTL_MS = "0";
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        results: [],
+        has_more: false,
+        next_cursor: null
+      }),
+      { status: 200 }
+    );
+
+  try {
+    const response = await handleApiRequest("POST", "/api/classify", {
+      resource: {
+        title: "Example",
+        url: "https://example.com",
+        type: "webpage"
+      }
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(
+      isRecord(response.body) &&
+        isRecord(response.body.classification) &&
+        response.body.classification.engine,
+      "local"
+    );
+  } finally {
+    process.env = previousEnv;
+    globalThis.fetch = previousFetch;
+  }
+});

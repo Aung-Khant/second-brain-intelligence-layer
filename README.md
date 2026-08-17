@@ -136,7 +136,9 @@ Then restart the local API server:
 npm run server
 ```
 
-When AI is enabled, the extension shows an `AI` badge beside the summary. If the AI request fails, the server falls back to local matching and the popup tells you local matching was used.
+The main `Classify` button is intentionally fast and local-first. It uses the cached Notion taxonomy and does not wait for AI. Use `AI Enhance` only when you want a better summary, Save Intent, Why Saved, or suggested new Topics.
+
+When AI Enhance succeeds, the extension shows an `AI` badge beside the summary. If the AI request fails, the server falls back to local matching and the popup tells you local matching was used.
 
 AI can suggest new Topics when no existing Topic fits, but Phase 6 does not auto-create Topics. Treat those suggestions as review notes until the Topic creation approval flow is added.
 

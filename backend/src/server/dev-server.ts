@@ -3,6 +3,7 @@ import { AppError } from "../../../shared/types/errors.js";
 import {
   classifyWithNotionTaxonomy,
   createApprovedTopic,
+  enhanceClassificationWithAi,
   saveConfirmedResource,
   type ClassifyApiRequest,
   type CreateTopicApiRequest,
@@ -49,6 +50,13 @@ export async function handleApiRequest(
       return {
         statusCode: 200,
         body: await classifyWithNotionTaxonomy(body as ClassifyApiRequest)
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/enhance") {
+      return {
+        statusCode: 200,
+        body: await enhanceClassificationWithAi(body as ClassifyApiRequest)
       };
     }
 

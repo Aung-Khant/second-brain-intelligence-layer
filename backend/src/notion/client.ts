@@ -13,6 +13,11 @@ type NotionListResponse = {
   next_cursor: string | null;
 };
 
+type NotionCreatePageResponse = {
+  id: string;
+  url: string;
+};
+
 export class NotionClient {
   constructor(private readonly config: NotionTaxonomyConfig) {}
 
@@ -40,6 +45,42 @@ export class NotionClient {
     return pages;
   }
 
+  async queryDataSourceWithFilter(
+    dataSourceId: string,
+    filter: Record<string, unknown>
+  ): Promise<NotionPage[]> {
+    const response = await this.request<NotionListResponse>(
+      `/v1/data_sources/${dataSourceId}/query`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          page_size: 100,
+          filter
+        })
+      }
+    );
+
+    return response.results;
+  }
+
+  async createPageInDataSource(
+    dataSourceId: string,
+    properties: Record<string, unknown>,
+    options: { useDefaultTemplate?: boolean } = {}
+  ): Promise<NotionCreatePageResponse> {
+    return this.request<NotionCreatePageResponse>("/v1/pages", {
+      method: "POST",
+      body: JSON.stringify({
+        parent: {
+          type: "data_source_id",
+          data_source_id: dataSourceId
+        },
+        properties,
+        template: options.useDefaultTemplate ? { type: "default" } : { type: "none" }
+      })
+    });
+  }
+
   private async request<T>(path: string, init: RequestInit): Promise<T> {
     const response = await fetch(`https://api.notion.com${path}`, {
       ...init,
@@ -63,6 +104,12 @@ export class NotionClient {
 
     return (await response.json()) as T;
   }
+}
+
+export function getUrl(properties: Record<string, unknown>, name: string): string | undefined {
+  const property = properties[name];
+  if (!isRecord(property) || property.type !== "url") return undefined;
+  return typeof property.url === "string" ? property.url : undefined;
 }
 
 export function getTitle(properties: Record<string, unknown>, name = "Name"): string {

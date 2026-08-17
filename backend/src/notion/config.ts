@@ -6,12 +6,14 @@ export type NotionTaxonomyConfig = {
   areasDataSourceId: string;
   topicsDataSourceId: string;
   projectsDataSourceId: string;
+  resourcesDataSourceId: string;
 };
 
 const defaultDataSourceIds = {
   areas: "048d5cf2-323d-8307-a7e6-8795bc75196a",
   topics: "4c1d5cf2-323d-820e-bed5-87a0b774f147",
-  projects: "3e1d5cf2-323d-8299-9af5-8703a17b96c7"
+  projects: "3e1d5cf2-323d-8299-9af5-8703a17b96c7",
+  resources: "ab7d5cf2-323d-8350-abec-07da57d306af"
 } as const;
 
 export function readNotionTaxonomyConfig(): NotionTaxonomyConfig {
@@ -20,7 +22,8 @@ export function readNotionTaxonomyConfig(): NotionTaxonomyConfig {
     notionVersion: process.env.NOTION_VERSION || "2026-03-11",
     areasDataSourceId: process.env.NOTION_AREAS_DATA_SOURCE_ID || defaultDataSourceIds.areas,
     topicsDataSourceId: process.env.NOTION_TOPICS_DATA_SOURCE_ID || defaultDataSourceIds.topics,
-    projectsDataSourceId: process.env.NOTION_PROJECTS_DATA_SOURCE_ID || defaultDataSourceIds.projects
+    projectsDataSourceId: process.env.NOTION_PROJECTS_DATA_SOURCE_ID || defaultDataSourceIds.projects,
+    resourcesDataSourceId: process.env.NOTION_RESOURCES_DATA_SOURCE_ID || defaultDataSourceIds.resources
   };
 }
 

@@ -8,6 +8,7 @@
     "classify": "node dist/backend/src/cli/classify.js",
     "classify:notion": "npm run build && node dist/backend/src/cli/classify-notion.js",
     "taxonomy:notion": "npm run build && node dist/backend/src/cli/notion-taxonomy.js",
+    "save:notion": "npm run build && node dist/backend/src/cli/save-notion.js",
     "test": "npm run build && node --test dist/tests/**/*.test.js",
     "evaluate": "npm run build && node dist/backend/src/cli/evaluate-gold.js",
     "evaluate:notion": "npm run build && node dist/backend/src/cli/evaluate-gold.js --notion"

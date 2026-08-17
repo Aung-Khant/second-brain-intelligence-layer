@@ -1,0 +1,17 @@
+{
+  "resource": {
+    "name": "30 Days Of Python",
+    "url": "https://github.com/Asabeneh/30-Days-Of-Python",
+    "resourceType": "webpage",
+    "description": "A 30-day Python learning curriculum covering variables, functions, modules, regular expressions, file handling, web scraping, APIs, Pandas, and building APIs.",
+    "areaIds": [],
+    "topicIds": [],
+    "projectIds": [],
+    "saveIntent": "learn"
+  },
+  "aiSuggestion": {
+    "areas": [],
+    "topics": [],
+    "projects": []
+  }
+}

@@ -6,6 +6,7 @@ import {
   type ClassifyApiRequest,
   type SaveApiRequest
 } from "./api.js";
+import { readNotionTaxonomyCacheStatus } from "../notion/taxonomy.js";
 
 type JsonResponse = {
   statusCode: number;
@@ -36,7 +37,8 @@ export async function handleApiRequest(
         statusCode: 200,
         body: {
           ok: true,
-          service: "second-brain-intelligence-layer"
+          service: "second-brain-intelligence-layer",
+          notionTaxonomyCache: readNotionTaxonomyCacheStatus()
         }
       };
     }

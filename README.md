@@ -100,6 +100,16 @@ Then load the extension in Chrome:
 
 The extension talks to `http://127.0.0.1:3737`, so keep `npm run server` running while using it.
 
+The server caches your Notion Areas, Topics, and Projects in memory for 10 minutes. This makes repeated classification faster because Notion is not refetched on every click. Restarting the server clears the cache.
+
+You can change or disable the cache with:
+
+```bash
+NOTION_TAXONOMY_CACHE_TTL_MS=600000
+```
+
+Use `0` to disable the cache while editing your taxonomy heavily.
+
 ## Enable AI Classification
 
 By default, the local server uses the rule-based classifier so the extension works without any external AI call.

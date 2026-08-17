@@ -3,7 +3,60 @@ import { assertTaxonomy } from "../../../shared/schemas/validation.js";
 import { NotionClient, getCheckbox, getRelationIds, getRichText, getStatus, getTitle } from "./client.js";
 import { readNotionTaxonomyConfig } from "./config.js";
 
+const defaultTaxonomyCacheTtlMs = 10 * 60 * 1000;
+
+let cachedTaxonomy:
+  | {
+      expiresAt: number;
+      taxonomy: Taxonomy;
+    }
+  | undefined;
+
+let pendingTaxonomyFetch: Promise<Taxonomy> | undefined;
+
 export async function fetchNotionTaxonomy(): Promise<Taxonomy> {
+  const now = Date.now();
+  if (cachedTaxonomy && cachedTaxonomy.expiresAt > now) {
+    return cachedTaxonomy.taxonomy;
+  }
+
+  if (pendingTaxonomyFetch) {
+    return pendingTaxonomyFetch;
+  }
+
+  pendingTaxonomyFetch = fetchFreshNotionTaxonomy()
+    .then((taxonomy) => {
+      cachedTaxonomy = {
+        taxonomy,
+        expiresAt: Date.now() + readTaxonomyCacheTtlMs()
+      };
+      return taxonomy;
+    })
+    .finally(() => {
+      pendingTaxonomyFetch = undefined;
+    });
+
+  return pendingTaxonomyFetch;
+}
+
+export function clearNotionTaxonomyCache(): void {
+  cachedTaxonomy = undefined;
+  pendingTaxonomyFetch = undefined;
+}
+
+export function readNotionTaxonomyCacheStatus(): {
+  cached: boolean;
+  expiresAt?: string;
+  ttlMs: number;
+} {
+  return {
+    cached: Boolean(cachedTaxonomy && cachedTaxonomy.expiresAt > Date.now()),
+    expiresAt: cachedTaxonomy ? new Date(cachedTaxonomy.expiresAt).toISOString() : undefined,
+    ttlMs: readTaxonomyCacheTtlMs()
+  };
+}
+
+async function fetchFreshNotionTaxonomy(): Promise<Taxonomy> {
   const config = readNotionTaxonomyConfig();
   const client = new NotionClient(config);
 
@@ -35,6 +88,14 @@ export async function fetchNotionTaxonomy(): Promise<Taxonomy> {
 
   assertTaxonomy(taxonomy);
   return taxonomy;
+}
+
+function readTaxonomyCacheTtlMs(): number {
+  const rawValue = process.env.NOTION_TAXONOMY_CACHE_TTL_MS;
+  if (!rawValue) return defaultTaxonomyCacheTtlMs;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : defaultTaxonomyCacheTtlMs;
 }
 
 function toArea(id: string, properties: Record<string, unknown>): Area | undefined {

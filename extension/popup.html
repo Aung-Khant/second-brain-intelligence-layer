@@ -32,7 +32,10 @@
       <p id="status" class="status">Open a page, then classify it.</p>
 
       <section id="summarySection" class="summary" hidden>
-        <h2>Summary</h2>
+        <div class="sectionHeader">
+          <h2>Summary</h2>
+          <span id="engineBadge" class="miniPill">Local</span>
+        </div>
         <p id="summary"></p>
       </section>
 
@@ -63,6 +66,11 @@
         <div class="relationGroup">
           <h2>Topics</h2>
           <div id="topicsList" class="relationList"></div>
+        </div>
+
+        <div id="newTopicsGroup" class="relationGroup" hidden>
+          <h2>Suggested New Topics</h2>
+          <div id="newTopicsList" class="relationList"></div>
         </div>
 
         <div class="relationGroup">

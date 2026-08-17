@@ -14,12 +14,15 @@ const elements = {
   saveButton: document.querySelector("#saveButton"),
   status: document.querySelector("#status"),
   summarySection: document.querySelector("#summarySection"),
+  engineBadge: document.querySelector("#engineBadge"),
   summary: document.querySelector("#summary"),
   relationsSection: document.querySelector("#relationsSection"),
   saveIntent: document.querySelector("#saveIntent"),
   whySaved: document.querySelector("#whySaved"),
   areasList: document.querySelector("#areasList"),
   topicsList: document.querySelector("#topicsList"),
+  newTopicsGroup: document.querySelector("#newTopicsGroup"),
+  newTopicsList: document.querySelector("#newTopicsList"),
   projectsList: document.querySelector("#projectsList")
 };
 
@@ -87,7 +90,11 @@ async function classifyCurrentPage() {
     state.classification = response.classification;
     renderClassification(response.classification);
     elements.saveButton.disabled = false;
-    setStatus("Review the matches, then save.");
+    setStatus(
+      response.fallback
+        ? "AI was unavailable, so local matching was used."
+        : "Review the matches, then save."
+    );
   } catch (error) {
     setStatus(error.message, true);
   } finally {
@@ -108,7 +115,8 @@ async function saveCurrentPage() {
       aiSuggestion: {
         areas: state.classification.areas.map((item) => item.entityId),
         topics: state.classification.topics.map((item) => item.entityId),
-        projects: state.classification.projects.map((item) => item.entityId)
+        projects: state.classification.projects.map((item) => item.entityId),
+        model: state.classification.engine
       },
       confirmWrite: true
     });
@@ -157,11 +165,21 @@ function selectedIds(kind) {
 
 function renderClassification(classification) {
   elements.summary.textContent = classification.summary;
+  elements.engineBadge.textContent = classification.engine === "openai" ? "AI" : "Local";
   elements.summarySection.hidden = false;
   elements.relationsSection.hidden = false;
 
+  if (classification.suggestedSaveIntent) {
+    elements.saveIntent.value = classification.suggestedSaveIntent;
+  }
+
+  if (classification.suggestedWhySaved) {
+    elements.whySaved.value = classification.suggestedWhySaved;
+  }
+
   renderRelations(elements.areasList, "areas", classification.areas);
   renderRelations(elements.topicsList, "topics", classification.topics);
+  renderSuggestedTopics(classification.suggestedTopics ?? []);
   renderRelations(elements.projectsList, "projects", classification.projects);
 }
 
@@ -203,6 +221,44 @@ function renderRelations(container, kind, relations) {
   }
 }
 
+function renderSuggestedTopics(suggestedTopics) {
+  elements.newTopicsList.replaceChildren();
+  elements.newTopicsGroup.hidden = suggestedTopics.length === 0;
+
+  for (const suggestion of suggestedTopics) {
+    const item = document.createElement("div");
+    item.className = "topicSuggestion";
+
+    const header = document.createElement("div");
+    header.className = "topicSuggestionHeader";
+
+    const name = document.createElement("span");
+    name.className = "relationName";
+    name.textContent = suggestion.name;
+
+    const confidence = document.createElement("span");
+    confidence.className = "confidence";
+    confidence.textContent = `${Math.round(suggestion.confidence)}%`;
+
+    header.append(name, confidence);
+    item.append(header);
+
+    if (suggestion.areaName) {
+      const area = document.createElement("span");
+      area.className = "topicArea";
+      area.textContent = suggestion.areaName;
+      item.append(area);
+    }
+
+    const reason = document.createElement("span");
+    reason.className = "relationReason";
+    reason.textContent = suggestion.reason;
+    item.append(reason);
+
+    elements.newTopicsList.append(item);
+  }
+}
+
 async function postJson(path, body) {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: "POST",
@@ -223,11 +279,30 @@ async function postJson(path, body) {
 function inferResourceType(url) {
   try {
     const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (host.includes("youtube.com") || host.includes("youtu.be")) {
-      return parsed.pathname.includes("/channel/") || parsed.pathname.includes("/@")
-        ? "youtube_channel"
-        : "youtube_video";
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const pathname = parsed.pathname.toLowerCase();
+
+    if (host === "youtu.be") {
+      return "youtube_video";
+    }
+
+    if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+      if (
+        pathname === "/watch" ||
+        pathname.startsWith("/shorts/") ||
+        pathname.startsWith("/live/")
+      ) {
+        return "youtube_video";
+      }
+
+      if (
+        pathname.startsWith("/@") ||
+        pathname.startsWith("/channel/") ||
+        pathname.startsWith("/c/") ||
+        pathname.startsWith("/user/")
+      ) {
+        return "youtube_channel";
+      }
     }
   } catch {
     return "webpage";

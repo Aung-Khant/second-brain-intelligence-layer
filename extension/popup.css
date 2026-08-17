@@ -63,6 +63,23 @@ h2 {
   padding: 6px 9px;
 }
 
+.miniPill {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.sectionHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .resource,
 .summary,
 .relations {
@@ -206,6 +223,28 @@ button:disabled {
 
 .confidence {
   color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.topicSuggestion {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+}
+
+.topicSuggestionHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.topicArea {
+  color: #64748b;
   font-size: 11px;
   font-weight: 700;
 }

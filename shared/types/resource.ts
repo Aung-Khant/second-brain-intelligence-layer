@@ -45,3 +45,19 @@ export type ClassifiedResource = ResourceUnderstanding & {
   projects: RelationSuggestion[];
 };
 
+export type NewTopicSuggestion = {
+  name: string;
+  areaId?: string;
+  areaName?: string;
+  confidence: number;
+  reason: string;
+};
+
+export type IntelligenceEngine = "local" | "openai";
+
+export type IntelligentClassification = ClassifiedResource & {
+  engine: IntelligenceEngine;
+  suggestedTopics: NewTopicSuggestion[];
+  suggestedSaveIntent?: SaveIntent;
+  suggestedWhySaved?: string;
+};

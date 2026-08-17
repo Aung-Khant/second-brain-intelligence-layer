@@ -99,3 +99,24 @@ Then load the extension in Chrome:
 5. Open a normal web page, click the extension, classify, review, and save.
 
 The extension talks to `http://127.0.0.1:3737`, so keep `npm run server` running while using it.
+
+## Enable AI Classification
+
+By default, the local server uses the rule-based classifier so the extension works without any external AI call.
+
+To enable OpenAI classification, add these values to `.env`:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-5-mini
+```
+
+Then restart the local API server:
+
+```bash
+npm run server
+```
+
+When AI is enabled, the extension shows an `AI` badge beside the summary. If the AI request fails, the server falls back to local matching and the popup tells you local matching was used.
+
+AI can suggest new Topics when no existing Topic fits, but Phase 6 does not auto-create Topics. Treat those suggestions as review notes until the Topic creation approval flow is added.

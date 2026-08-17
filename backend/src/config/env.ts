@@ -12,7 +12,7 @@ export function loadDotEnv(path = ".env"): void {
     const equalsIndex = trimmed.indexOf("=");
     if (equalsIndex === -1) continue;
 
-    const key = trimmed.slice(0, equalsIndex).trim();
+    const key = trimmed.slice(0, equalsIndex).trim().replace(/^export\s+/, "");
     const rawValue = trimmed.slice(equalsIndex + 1).trim();
     if (!key || process.env[key] !== undefined) continue;
 
@@ -29,4 +29,3 @@ function unwrapEnvValue(value: string): string {
   }
   return value;
 }
-

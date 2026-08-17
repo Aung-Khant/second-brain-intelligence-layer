@@ -1,11 +1,18 @@
 import { classifyResource } from "../ai/classify-resource.js";
+import { classifyResourceWithOpenAi } from "../ai/openai-classify-resource.js";
+import { shouldUseOpenAi } from "../config/openai.js";
 import { appendClassificationLog } from "../evaluation/classification-log.js";
 import { checkDuplicateResourceInNotion, saveResourceToNotion } from "../notion/save-resource.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
 import { assertConfirmedResource } from "../../../shared/schemas/save-validation.js";
 import { assertTrustedResourceInput } from "../../../shared/schemas/validation.js";
-import type { ClassifiedResource, TrustedResourceInput } from "../../../shared/types/resource.js";
+import type {
+  ClassifiedResource,
+  IntelligentClassification,
+  TrustedResourceInput
+} from "../../../shared/types/resource.js";
 import type { ConfirmedResource, SaveResourceResult } from "../../../shared/types/save.js";
+import type { Taxonomy } from "../../../shared/types/taxonomy.js";
 
 export type ClassifyApiRequest = {
   resource: TrustedResourceInput;
@@ -13,7 +20,11 @@ export type ClassifyApiRequest = {
 
 export type ClassifyApiResponse = {
   resource: TrustedResourceInput;
-  classification: ClassifiedResource;
+  classification: IntelligentClassification;
+  fallback?: {
+    engine: "local";
+    reason: string;
+  };
 };
 
 export type SaveApiRequest = {
@@ -22,6 +33,7 @@ export type SaveApiRequest = {
     areas: string[];
     topics: string[];
     projects: string[];
+    model?: string;
   };
   confirmWrite?: boolean;
 };
@@ -40,12 +52,28 @@ export async function classifyWithNotionTaxonomy(
   assertTrustedResourceInput(input.resource);
 
   const taxonomy = await fetchNotionTaxonomy();
+  if (shouldUseOpenAi()) {
+    try {
+      return {
+        resource: input.resource,
+        classification: await classifyResourceWithOpenAi(input.resource, taxonomy)
+      };
+    } catch (error) {
+      const localClassification = classifyLocal(input.resource, taxonomy);
+      return {
+        resource: input.resource,
+        classification: localClassification,
+        fallback: {
+          engine: "local",
+          reason: error instanceof Error ? error.message : "OpenAI classification failed."
+        }
+      };
+    }
+  }
+
   return {
     resource: input.resource,
-    classification: classifyResource({
-      resource: input.resource,
-      taxonomy
-    })
+    classification: classifyLocal(input.resource, taxonomy)
   };
 }
 
@@ -74,7 +102,7 @@ export async function saveConfirmedResource(input: SaveApiRequest): Promise<Save
   if (result.status === "saved") {
     await appendClassificationLog({
       resourceUrl: input.resource.url,
-      model: "local-classifier",
+      model: input.aiSuggestion?.model ?? "extension-classifier",
       aiSuggestion: input.aiSuggestion ?? {
         areas: input.resource.areaIds,
         topics: input.resource.topicIds,
@@ -89,4 +117,20 @@ export async function saveConfirmedResource(input: SaveApiRequest): Promise<Save
   }
 
   return result;
+}
+
+function classifyLocal(
+  resource: TrustedResourceInput,
+  taxonomy: Taxonomy
+): IntelligentClassification {
+  const classification: ClassifiedResource = classifyResource({
+    resource,
+    taxonomy
+  });
+
+  return {
+    ...classification,
+    engine: "local",
+    suggestedTopics: []
+  };
 }

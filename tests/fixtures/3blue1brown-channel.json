@@ -1,0 +1,9 @@
+{
+  "resource": {
+    "type": "youtube_channel",
+    "title": "3Blue1Brown",
+    "creator": "Grant Sanderson",
+    "description": "Visual explanations of mathematics, including linear algebra, eigenvectors, and animated intuition."
+  }
+}
+

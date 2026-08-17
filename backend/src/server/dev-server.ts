@@ -2,8 +2,10 @@ import http from "node:http";
 import { AppError } from "../../../shared/types/errors.js";
 import {
   classifyWithNotionTaxonomy,
+  createApprovedTopic,
   saveConfirmedResource,
   type ClassifyApiRequest,
+  type CreateTopicApiRequest,
   type SaveApiRequest
 } from "./api.js";
 import { readNotionTaxonomyCacheStatus } from "../notion/taxonomy.js";
@@ -54,6 +56,13 @@ export async function handleApiRequest(
       return {
         statusCode: 200,
         body: await saveConfirmedResource(body as SaveApiRequest)
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/topics") {
+      return {
+        statusCode: 200,
+        body: await createApprovedTopic(body as CreateTopicApiRequest)
       };
     }
 

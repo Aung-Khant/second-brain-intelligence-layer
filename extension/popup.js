@@ -67,7 +67,7 @@ function extractPage() {
     title: document.title,
     url: location.href,
     description,
-    visibleText: document.body?.innerText?.slice(0, 12000) ?? ""
+    visibleText: document.body?.innerText?.slice(0, 4000) ?? ""
   };
 }
 
@@ -255,8 +255,57 @@ function renderSuggestedTopics(suggestedTopics) {
     reason.textContent = suggestion.reason;
     item.append(reason);
 
+    const createButton = document.createElement("button");
+    createButton.type = "button";
+    createButton.className = "smallButton";
+    createButton.textContent = "Create Topic";
+    createButton.addEventListener("click", () => createSuggestedTopic(suggestion, createButton));
+    item.append(createButton);
+
     elements.newTopicsList.append(item);
   }
+}
+
+async function createSuggestedTopic(suggestion, button) {
+  button.disabled = true;
+  const previousText = button.textContent;
+  button.textContent = "Creating...";
+  setStatus(`Creating Topic: ${suggestion.name}`);
+
+  try {
+    const response = await postJson("/api/topics", {
+      name: suggestion.name,
+      areaId: suggestion.areaId,
+      areaName: suggestion.areaName,
+      reason: suggestion.reason
+    });
+
+    addCreatedTopic(response.topic);
+    button.textContent = "Created";
+    setStatus("Topic created and selected.");
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = previousText;
+    setStatus(error.message, true);
+  }
+}
+
+function addCreatedTopic(topic) {
+  const existingTopics = state.classification?.topics ?? [];
+  if (existingTopics.some((item) => item.entityId === topic.id)) return;
+
+  const relation = {
+    entityId: topic.id,
+    entityName: topic.name,
+    confidence: 100,
+    reason: topic.areaName
+      ? `Created from AI suggestion under ${topic.areaName}.`
+      : "Created from AI suggestion.",
+    state: "preselected"
+  };
+
+  state.classification.topics = [...existingTopics, relation];
+  renderRelations(elements.topicsList, "topics", state.classification.topics);
 }
 
 async function postJson(path, body) {

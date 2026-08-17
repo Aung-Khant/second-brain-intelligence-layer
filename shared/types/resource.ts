@@ -53,6 +53,14 @@ export type NewTopicSuggestion = {
   reason: string;
 };
 
+export type CreatedTopic = {
+  id: string;
+  name: string;
+  url: string;
+  areaId?: string;
+  areaName?: string;
+};
+
 export type IntelligenceEngine = "local" | "openai" | "openrouter";
 
 export type IntelligentClassification = ClassifiedResource & {

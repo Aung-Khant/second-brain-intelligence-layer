@@ -150,6 +150,20 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.smallButton {
+  background: #eef2ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  min-height: 32px;
+  padding: 7px 10px;
+  width: fit-content;
+}
+
+.smallButton:disabled {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
 .status {
   color: #64748b;
   font-size: 12px;

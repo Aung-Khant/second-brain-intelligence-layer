@@ -139,3 +139,5 @@ npm run server
 When AI is enabled, the extension shows an `AI` badge beside the summary. If the AI request fails, the server falls back to local matching and the popup tells you local matching was used.
 
 AI can suggest new Topics when no existing Topic fits, but Phase 6 does not auto-create Topics. Treat those suggestions as review notes until the Topic creation approval flow is added.
+
+Suggested Topics now have an explicit create action in the extension. Clicking `Create Topic` creates a Topic page in Notion with the default Topic template, links it to the suggested Area when available, clears the local taxonomy cache, and selects the new Topic for the Resource you are reviewing.

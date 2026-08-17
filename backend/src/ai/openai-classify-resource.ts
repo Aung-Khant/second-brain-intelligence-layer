@@ -144,6 +144,7 @@ async function classifyWithOpenRouter(
       provider: {
         require_parameters: true
       },
+      max_tokens: 1200,
       temperature: 0.1
     })
   });
@@ -175,10 +176,27 @@ function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string
     "Return concise, useful summary text for the Notion Description field.",
     "Confidence guide: 90-100 for direct title/name matches, 75-89 for strong semantic matches, 60-74 for weaker but useful suggestions.",
     "",
-    `Resource:\n${JSON.stringify(resource, null, 2)}`,
+    `Resource:\n${JSON.stringify(toPromptResource(resource), null, 2)}`,
     "",
     `Existing taxonomy:\n${JSON.stringify(toPromptTaxonomy(taxonomy), null, 2)}`
   ].join("\n");
+}
+
+function toPromptResource(resource: TrustedResourceInput): TrustedResourceInput {
+  return {
+    ...resource,
+    description: stripGenericDescription(resource.description),
+    visibleText: resource.visibleText?.slice(0, 4000)
+  };
+}
+
+function stripGenericDescription(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  const genericYoutubeDescription =
+    "Enjoy the videos and music you love, upload original content, and share it all with friends, family, and the world on YouTube.";
+
+  return value.trim() === genericYoutubeDescription ? undefined : value;
 }
 
 function toPromptTaxonomy(taxonomy: Taxonomy): Record<string, unknown> {

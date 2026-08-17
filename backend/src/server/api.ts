@@ -3,6 +3,7 @@ import { classifyResourceWithOpenAi } from "../ai/openai-classify-resource.js";
 import { shouldUseAi } from "../config/ai.js";
 import { appendClassificationLog } from "../evaluation/classification-log.js";
 import { checkDuplicateResourceInNotion, saveResourceToNotion } from "../notion/save-resource.js";
+import { createTopicInNotion } from "../notion/save-topic.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
 import { assertConfirmedResource } from "../../../shared/schemas/save-validation.js";
 import { assertTrustedResourceInput } from "../../../shared/schemas/validation.js";
@@ -10,6 +11,7 @@ import type {
   ClassifiedResource,
   IntelligentClassification,
   RelationSuggestion,
+  CreatedTopic,
   TrustedResourceInput
 } from "../../../shared/types/resource.js";
 import type { ConfirmedResource, SaveResourceResult } from "../../../shared/types/save.js";
@@ -46,6 +48,17 @@ export type SaveApiResponse =
       message: string;
       resource: ConfirmedResource;
     };
+
+export type CreateTopicApiRequest = {
+  name: string;
+  areaId?: string;
+  areaName?: string;
+  reason?: string;
+};
+
+export type CreateTopicApiResponse = {
+  topic: CreatedTopic;
+};
 
 export async function classifyWithNotionTaxonomy(
   input: ClassifyApiRequest
@@ -155,6 +168,19 @@ export async function saveConfirmedResource(input: SaveApiRequest): Promise<Save
   }
 
   return result;
+}
+
+export async function createApprovedTopic(
+  input: CreateTopicApiRequest
+): Promise<CreateTopicApiResponse> {
+  return {
+    topic: await createTopicInNotion({
+      name: input.name,
+      areaId: input.areaId,
+      areaName: input.areaName,
+      definition: input.reason
+    })
+  };
 }
 
 function classifyLocal(

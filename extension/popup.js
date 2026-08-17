@@ -165,7 +165,7 @@ function selectedIds(kind) {
 
 function renderClassification(classification) {
   elements.summary.textContent = classification.summary;
-  elements.engineBadge.textContent = classification.engine === "openai" ? "AI" : "Local";
+  elements.engineBadge.textContent = classification.engine === "local" ? "Local" : "AI";
   elements.summarySection.hidden = false;
   elements.relationsSection.hidden = false;
 

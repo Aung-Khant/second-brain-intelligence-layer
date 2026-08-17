@@ -1,6 +1,6 @@
 import { classifyResource } from "../ai/classify-resource.js";
 import { classifyResourceWithOpenAi } from "../ai/openai-classify-resource.js";
-import { shouldUseOpenAi } from "../config/openai.js";
+import { shouldUseAi } from "../config/ai.js";
 import { appendClassificationLog } from "../evaluation/classification-log.js";
 import { checkDuplicateResourceInNotion, saveResourceToNotion } from "../notion/save-resource.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
@@ -9,6 +9,7 @@ import { assertTrustedResourceInput } from "../../../shared/schemas/validation.j
 import type {
   ClassifiedResource,
   IntelligentClassification,
+  RelationSuggestion,
   TrustedResourceInput
 } from "../../../shared/types/resource.js";
 import type { ConfirmedResource, SaveResourceResult } from "../../../shared/types/save.js";
@@ -52,11 +53,15 @@ export async function classifyWithNotionTaxonomy(
   assertTrustedResourceInput(input.resource);
 
   const taxonomy = await fetchNotionTaxonomy();
-  if (shouldUseOpenAi()) {
+  if (shouldUseAi()) {
     try {
+      const localClassification = classifyLocal(input.resource, taxonomy);
       return {
         resource: input.resource,
-        classification: await classifyResourceWithOpenAi(input.resource, taxonomy)
+        classification: mergeAiWithLocalRelations(
+          await classifyResourceWithOpenAi(input.resource, taxonomy),
+          localClassification
+        )
       };
     } catch (error) {
       const localClassification = classifyLocal(input.resource, taxonomy);
@@ -75,6 +80,39 @@ export async function classifyWithNotionTaxonomy(
     resource: input.resource,
     classification: classifyLocal(input.resource, taxonomy)
   };
+}
+
+function mergeAiWithLocalRelations(
+  aiClassification: IntelligentClassification,
+  localClassification: IntelligentClassification
+): IntelligentClassification {
+  return {
+    ...aiClassification,
+    areas: mergeRelations(aiClassification.areas, localClassification.areas),
+    topics: mergeRelations(aiClassification.topics, localClassification.topics),
+    projects: mergeRelations(aiClassification.projects, localClassification.projects)
+  };
+}
+
+function mergeRelations(
+  aiRelations: RelationSuggestion[],
+  localRelations: RelationSuggestion[]
+): RelationSuggestion[] {
+  const byId = new Map<string, RelationSuggestion>();
+
+  for (const relation of aiRelations) {
+    byId.set(relation.entityId, relation);
+  }
+
+  for (const relation of localRelations) {
+    if (!byId.has(relation.entityId)) {
+      byId.set(relation.entityId, relation);
+    }
+  }
+
+  return Array.from(byId.values()).sort(
+    (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
+  );
 }
 
 export async function saveConfirmedResource(input: SaveApiRequest): Promise<SaveApiResponse> {

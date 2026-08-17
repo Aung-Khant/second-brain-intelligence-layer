@@ -53,7 +53,7 @@ export type NewTopicSuggestion = {
   reason: string;
 };
 
-export type IntelligenceEngine = "local" | "openai";
+export type IntelligenceEngine = "local" | "openai" | "openrouter";
 
 export type IntelligentClassification = ClassifiedResource & {
   engine: IntelligenceEngine;

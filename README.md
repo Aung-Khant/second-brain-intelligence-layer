@@ -104,9 +104,18 @@ The extension talks to `http://127.0.0.1:3737`, so keep `npm run server` running
 
 By default, the local server uses the rule-based classifier so the extension works without any external AI call.
 
-To enable OpenAI classification, add these values to `.env`:
+To enable OpenRouter classification, add these values to `.env`:
 
 ```bash
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+```
+
+You can also use OpenAI directly:
+
+```bash
+AI_PROVIDER=openai
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5-mini
 ```

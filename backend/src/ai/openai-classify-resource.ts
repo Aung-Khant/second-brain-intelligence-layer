@@ -8,7 +8,7 @@ import type {
 } from "../../../shared/types/resource.js";
 import type { Area, Project, Taxonomy, Topic } from "../../../shared/types/taxonomy.js";
 import { relationshipThresholds } from "../config/classification.js";
-import { readOpenAiConfig } from "../config/openai.js";
+import { readAiConfig, type AiConfig } from "../config/ai.js";
 
 type OpenAiRelation = {
   entityId: string;
@@ -38,6 +38,14 @@ type ResponsesApiOutput = {
   }>;
 };
 
+type ChatCompletionsOutput = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+};
+
 const saveIntents: SaveIntent[] = [
   "learn",
   "use_for_project",
@@ -52,11 +60,27 @@ export async function classifyResourceWithOpenAi(
   resource: TrustedResourceInput,
   taxonomy: Taxonomy
 ): Promise<IntelligentClassification> {
-  const config = readOpenAiConfig();
+  const config = readAiConfig();
   if (!config.apiKey) {
-    throw new AppError("AI_REQUEST_FAILED", "OPENAI_API_KEY is required for AI classification.");
+    throw new AppError(
+      "AI_REQUEST_FAILED",
+      `${config.provider === "openrouter" ? "OPENROUTER_API_KEY" : "OPENAI_API_KEY"} is required for AI classification.`
+    );
   }
 
+  const output =
+    config.provider === "openrouter"
+      ? await classifyWithOpenRouter(config, resource, taxonomy)
+      : await classifyWithOpenAiResponses(config, resource, taxonomy);
+
+  return normalizeAiClassification(output, taxonomy, config.provider);
+}
+
+async function classifyWithOpenAiResponses(
+  config: AiConfig,
+  resource: TrustedResourceInput,
+  taxonomy: Taxonomy
+): Promise<OpenAiClassification> {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -85,7 +109,55 @@ export async function classifyResourceWithOpenAi(
   }
 
   const payload = (await response.json()) as ResponsesApiOutput;
-  return normalizeAiClassification(parseOutputText(payload), taxonomy);
+  return parseResponsesOutputText(payload);
+}
+
+async function classifyWithOpenRouter(
+  config: AiConfig,
+  resource: TrustedResourceInput,
+  taxonomy: Taxonomy
+): Promise<OpenAiClassification> {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "http://127.0.0.1:3737",
+      "X-Title": "Second Brain Intelligence Layer"
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        {
+          role: "user",
+          content: buildPrompt(resource, taxonomy)
+        }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "second_brain_classification",
+          strict: true,
+          schema: responseSchema
+        }
+      },
+      provider: {
+        require_parameters: true
+      },
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new AppError(
+      "AI_REQUEST_FAILED",
+      `OpenRouter classification failed with HTTP ${response.status}: ${body.slice(0, 300)}`
+    );
+  }
+
+  const payload = (await response.json()) as ChatCompletionsOutput;
+  return parseChatCompletionsOutputText(payload);
 }
 
 function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string {
@@ -93,11 +165,15 @@ function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string
     "You classify a trusted web resource into a personal Second Brain.",
     "Use only existing Area, Topic, and Project IDs for relation arrays.",
     "Areas are broad and stable. Do not invent new Areas.",
+    "Choose 1-3 existing Areas when the resource clearly fits them. Do not leave Areas empty for obvious software, learning, finance, business, science, health, or creative resources.",
     "Projects must be existing active work only. Do not invent new Projects.",
     "Topics may be existing matches, or suggested as new topics in suggestedTopics when no existing topic fits clearly.",
+    "Existing Topics take priority over new Topic suggestions when the resource directly names or strongly matches an existing Topic.",
     "Do not force a misleading existing Topic. Prefer suggestedTopics when the concept is genuinely missing.",
+    "Do not mention a Project in suggestedWhySaved unless that exact existing Project ID is included in projects.",
     "For YouTube, ignore generic YouTube platform descriptions and summarize the actual video or channel from title and visible text.",
     "Return concise, useful summary text for the Notion Description field.",
+    "Confidence guide: 90-100 for direct title/name matches, 75-89 for strong semantic matches, 60-74 for weaker but useful suggestions.",
     "",
     `Resource:\n${JSON.stringify(resource, null, 2)}`,
     "",
@@ -130,7 +206,7 @@ function toPromptTaxonomy(taxonomy: Taxonomy): Record<string, unknown> {
   };
 }
 
-function parseOutputText(payload: ResponsesApiOutput): OpenAiClassification {
+function parseResponsesOutputText(payload: ResponsesApiOutput): OpenAiClassification {
   const text =
     payload.output_text ??
     payload.output?.flatMap((item) => item.content ?? []).find((content) => content.text)?.text;
@@ -142,16 +218,26 @@ function parseOutputText(payload: ResponsesApiOutput): OpenAiClassification {
   return JSON.parse(text) as OpenAiClassification;
 }
 
+function parseChatCompletionsOutputText(payload: ChatCompletionsOutput): OpenAiClassification {
+  const text = payload.choices?.[0]?.message?.content;
+  if (!text) {
+    throw new AppError("AI_INVALID_OUTPUT", "OpenRouter response did not include message content.");
+  }
+
+  return JSON.parse(text) as OpenAiClassification;
+}
+
 function normalizeAiClassification(
   output: OpenAiClassification,
-  taxonomy: Taxonomy
+  taxonomy: Taxonomy,
+  provider: "openai" | "openrouter"
 ): IntelligentClassification {
   if (!output || typeof output !== "object") {
     throw new AppError("AI_INVALID_OUTPUT", "AI classification must be an object.");
   }
 
   return {
-    engine: "openai",
+    engine: provider,
     summary: requiredString(output.summary, "summary"),
     concepts: stringArray(output.concepts).slice(0, 12),
     keywords: stringArray(output.keywords).slice(0, 16),
@@ -246,13 +332,22 @@ function requiredString(value: unknown, field: string): string {
 
 function stringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return value.filter(
+    (item): item is string =>
+      typeof item === "string" && item.trim().length > 0 && !looksLikeIdentifier(item)
+  );
 }
 
 function clampConfidence(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.max(0, Math.min(100, value))
     : 0;
+}
+
+function looksLikeIdentifier(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value.trim()
+  );
 }
 
 const relationSchema = {

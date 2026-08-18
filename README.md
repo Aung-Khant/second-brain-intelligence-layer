@@ -144,7 +144,9 @@ AI can suggest new Topics when no existing Topic fits. Nothing is created automa
 
 Areas work the same way. The popup shows the top suggested Area first; `Accept suggestion` selects an existing Area, and `Create suggested Area` creates a new Area page in Notion when the suggestion doesn't match anything you already have. You can also open the manual picker to choose a different Area, type your own new Area name, or skip Area assignment entirely for this save.
 
-Projects are never created automatically. You can only attach an existing Project by picking it from the manual Project picker sourced from your Notion database.
+AI never suggests a new Project — it only ever matches against your existing active Projects. If the right Project genuinely doesn't exist yet, choose `+ New Project...` in the manual Project picker to create one directly (name only, using your Projects database's default template), the same way `+ New Topic...` works.
+
+The Type field (Webpage, Article, YouTube Video, YouTube Channel) is auto-detected from the URL by default, but it's a normal dropdown — change it yourself if the detection guessed wrong before you Suggest or Save.
 
 The extension also includes manual Area, Topic, and Project pickers sourced from your Notion databases. Confidence scores are only suggestions; you can uncheck them, add the correct database item manually, and then save your final selection.
 

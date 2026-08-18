@@ -9,12 +9,14 @@ import {
   classifyWithNotionTaxonomy,
   createApprovedArea,
   createApprovedTopic,
+  createApprovedProject,
   enhanceClassificationWithAi,
   readTaxonomyForPicker,
   saveConfirmedResource,
   type ClassifyApiRequest,
   type CreateAreaApiRequest,
   type CreateTopicApiRequest,
+  type CreateProjectApiRequest,
   type SaveApiRequest
 } from "./api.js";
 import { readNotionTaxonomyCacheStatus } from "../notion/taxonomy.js";
@@ -93,6 +95,13 @@ export async function handleApiRequest(
       return {
         statusCode: 200,
         body: await createApprovedArea(body as CreateAreaApiRequest)
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/projects") {
+      return {
+        statusCode: 200,
+        body: await createApprovedProject(body as CreateProjectApiRequest)
       };
     }
 

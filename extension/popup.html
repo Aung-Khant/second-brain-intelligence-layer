@@ -29,7 +29,12 @@
         <input id="resourceUrl" type="url" autocomplete="off">
 
         <label for="resourceType">Type</label>
-        <input id="resourceType" type="text" autocomplete="off" readonly>
+        <select id="resourceType">
+          <option value="webpage">Webpage</option>
+          <option value="article">Article</option>
+          <option value="youtube_video">YouTube Video</option>
+          <option value="youtube_channel">YouTube Channel</option>
+        </select>
       </section>
 
       <section class="actions">
@@ -119,6 +124,10 @@
           <h2>Projects</h2>
           <div class="singlePickerRow">
             <select id="projectPicker"></select>
+          </div>
+          <div id="newProjectGroup" class="newAreaRow" hidden>
+            <input id="newProjectName" type="text" autocomplete="off" placeholder="New Project name">
+            <button id="createProjectButton" class="smallButton" type="button">Create</button>
           </div>
           <div id="projectsList" class="relationList"></div>
         </div>

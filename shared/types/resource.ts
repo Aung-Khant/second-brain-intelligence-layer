@@ -80,6 +80,12 @@ export type CreatedArea = {
   url: string;
 };
 
+export type CreatedProject = {
+  id: string;
+  name: string;
+  url: string;
+};
+
 export type IntelligenceEngine = "local" | "openai" | "openrouter";
 
 export type IntelligentClassification = ClassifiedResource & {

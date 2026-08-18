@@ -6,10 +6,13 @@
 // the server to classify it, and saveCurrentPage() writes the confirmed
 // selection to Notion. Area is a single-select flow (accept suggestion /
 // pick manually / create new / skip); Topics and Projects are multi-select
-// checkbox lists, with autoSelectPrimaryRelation auto-checking a cluster of
-// close-scoring Topics rather than forcing a single pick. No bundler here,
-// so this can't import the shared/ TypeScript modules - resource-type
-// inference in particular is a hand-kept copy of shared/resource-detection.ts.
+// checkbox lists, each with a "+ New ..." picker option that reveals a
+// name field and Create button, and autoSelectPrimaryRelation auto-checks a
+// cluster of close-scoring Topics rather than forcing a single pick. Type
+// defaults to auto-detected from the URL but is a plain overridable select.
+// No bundler here, so this can't import the shared/ TypeScript modules -
+// resource-type inference in particular is a hand-kept copy of
+// shared/resource-detection.ts.
 const apiBaseUrl = "http://127.0.0.1:3737";
 
 const state = {
@@ -22,6 +25,7 @@ const state = {
 
 const createNewAreaValue = "__create_new_area__";
 const createNewTopicValue = "__create_new_topic__";
+const createNewProjectValue = "__create_new_project__";
 
 const elements = {
   pageHost: document.querySelector("#pageHost"),
@@ -64,6 +68,9 @@ const elements = {
   newTopicsList: document.querySelector("#newTopicsList"),
   projectsList: document.querySelector("#projectsList"),
   projectPicker: document.querySelector("#projectPicker"),
+  newProjectGroup: document.querySelector("#newProjectGroup"),
+  newProjectName: document.querySelector("#newProjectName"),
+  createProjectButton: document.querySelector("#createProjectButton"),
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -80,6 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   elements.topicPicker.addEventListener("change", () => addPickedRelation("topics"));
   elements.createTopicButton.addEventListener("click", createNewTopic);
   elements.projectPicker.addEventListener("change", () => addPickedRelation("projects"));
+  elements.createProjectButton.addEventListener("click", createNewProject);
   checkServer();
   loadTaxonomyPickers();
 });
@@ -102,7 +110,7 @@ async function hydrateCurrentPage() {
 
     elements.resourceTitle.value = state.page.title;
     elements.resourceUrl.value = state.page.url;
-    elements.resourceType.value = resourceTypeLabel(inferResourceType(state.page.url));
+    elements.resourceType.value = inferResourceType(state.page.url);
     elements.pageHost.textContent = hostFromUrl(state.page.url);
     updatePageReadiness();
   } catch (error) {
@@ -150,7 +158,9 @@ async function loadTaxonomyPickers() {
     renderPicker(
       elements.projectPicker,
       state.taxonomy.projects.filter((project) => (project.status ?? "active") === "active"),
-      "Choose Project"
+      "Choose Project",
+      "+ New Project...",
+      createNewProjectValue
     );
   } catch (error) {
     state.taxonomy = null;
@@ -166,7 +176,8 @@ function setPickerLoading(isLoading) {
     elements.topicPicker,
     elements.projectPicker,
     elements.createTopicButton,
-    elements.createAreaButton
+    elements.createAreaButton,
+    elements.createProjectButton
   ]) {
     element.disabled = isLoading;
   }
@@ -274,8 +285,7 @@ async function saveCurrentPage() {
 
 function buildTrustedResource() {
   const url = elements.resourceUrl.value.trim();
-  const type = inferResourceType(url);
-  elements.resourceType.value = resourceTypeLabel(type);
+  const type = elements.resourceType.value || inferResourceType(url);
 
   return {
     url,
@@ -288,8 +298,7 @@ function buildTrustedResource() {
 }
 
 function buildConfirmedResource() {
-  const type = inferResourceType(elements.resourceUrl.value);
-  elements.resourceType.value = resourceTypeLabel(type);
+  const type = elements.resourceType.value || inferResourceType(elements.resourceUrl.value);
   const saveIntent = elements.saveIntent.value;
   if (!saveIntent) {
     elements.saveIntent.focus();
@@ -705,6 +714,12 @@ async function addPickedRelation(kind) {
     return;
   }
 
+  if (kind === "projects" && select.value === createNewProjectValue) {
+    showNewProjectForm();
+    select.value = "";
+    return;
+  }
+
   const collectionByKind = {
     areas: state.taxonomy.areas,
     topics: state.taxonomy.topics,
@@ -775,6 +790,79 @@ function addTopicToTaxonomy(topic) {
     state.taxonomy.topics = [...state.taxonomy.topics, topic];
     renderPicker(elements.topicPicker, state.taxonomy.topics, "Choose Topic", "+ New Topic...", createNewTopicValue);
   }
+}
+
+function showNewProjectForm() {
+  elements.newProjectGroup.hidden = false;
+  elements.newProjectName.focus();
+}
+
+async function createNewProject() {
+  ensureClassification();
+  const name = elements.newProjectName.value.trim();
+  if (!name) {
+    setStatus("Enter a name for the new Project.", true);
+    return;
+  }
+
+  elements.createProjectButton.disabled = true;
+  elements.createProjectButton.textContent = "Creating...";
+  setStatus(`Creating Project: ${name}`);
+
+  try {
+    const response = await postJson("/api/projects", { name });
+    addProjectToTaxonomy(response.project);
+    addCreatedProject(response.project);
+    elements.newProjectName.value = "";
+    elements.newProjectGroup.hidden = true;
+    setStatus(`${response.project.name} created and selected.`);
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    elements.createProjectButton.disabled = false;
+    elements.createProjectButton.textContent = "Create";
+  }
+}
+
+function addProjectToTaxonomy(project) {
+  if (!state.taxonomy) {
+    state.taxonomy = {
+      areas: [],
+      topics: [],
+      projects: []
+    };
+  }
+
+  if (!state.taxonomy.projects.some((item) => item.id === project.id)) {
+    state.taxonomy.projects = [...state.taxonomy.projects, project];
+    renderPicker(
+      elements.projectPicker,
+      state.taxonomy.projects,
+      "Choose Project",
+      "+ New Project...",
+      createNewProjectValue
+    );
+  }
+}
+
+function addCreatedProject(project) {
+  if (!state.classification) {
+    ensureClassification();
+  }
+
+  const existingProjects = state.classification?.projects ?? [];
+  if (existingProjects.some((item) => item.entityId === project.id)) return;
+
+  const relation = {
+    entityId: project.id,
+    entityName: project.name,
+    confidence: 100,
+    reason: "Created from the manual Project picker.",
+    state: "preselected"
+  };
+
+  state.classification.projects = [...existingProjects, relation];
+  renderRelations(elements.projectsList, "projects", state.classification.projects);
 }
 
 function relationKindLabel(kind) {
@@ -1043,24 +1131,12 @@ function setBusy(isBusy) {
   elements.skipAreaButton.disabled = isBusy;
   elements.createAreaButton.disabled = isBusy;
   elements.createTopicButton.disabled = isBusy;
+  elements.createProjectButton.disabled = isBusy;
 }
 
 function setStatus(message, isError = false) {
   elements.status.textContent = message;
   elements.status.style.color = isError ? "#b91c1c" : "#64748b";
-}
-
-function resourceTypeLabel(type) {
-  switch (type) {
-    case "youtube_channel":
-      return "YouTube Channel";
-    case "youtube_video":
-      return "YouTube Video";
-    case "article":
-      return "Article";
-    default:
-      return "Webpage";
-  }
 }
 
 function updatePageReadiness() {

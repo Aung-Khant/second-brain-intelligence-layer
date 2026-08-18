@@ -12,6 +12,7 @@ import { appendClassificationLog } from "../evaluation/classification-log.js";
 import { checkDuplicateResourceInNotion, saveResourceToNotion } from "../notion/save-resource.js";
 import { createAreaInNotion } from "../notion/save-area.js";
 import { createTopicInNotion } from "../notion/save-topic.js";
+import { createProjectInNotion } from "../notion/save-project.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
 import { assertConfirmedResource } from "../../../shared/schemas/save-validation.js";
 import { assertTrustedResourceInput } from "../../../shared/schemas/validation.js";
@@ -21,6 +22,7 @@ import type {
   RelationSuggestion,
   CreatedArea,
   CreatedTopic,
+  CreatedProject,
   TrustedResourceInput
 } from "../../../shared/types/resource.js";
 import type { ConfirmedResource, SaveResourceResult } from "../../../shared/types/save.js";
@@ -81,6 +83,14 @@ export type CreateAreaApiRequest = {
 
 export type CreateAreaApiResponse = {
   area: CreatedArea;
+};
+
+export type CreateProjectApiRequest = {
+  name: string;
+};
+
+export type CreateProjectApiResponse = {
+  project: CreatedProject;
 };
 
 export async function classifyWithNotionTaxonomy(
@@ -240,6 +250,16 @@ export async function createApprovedArea(
 ): Promise<CreateAreaApiResponse> {
   return {
     area: await createAreaInNotion({
+      name: input.name
+    })
+  };
+}
+
+export async function createApprovedProject(
+  input: CreateProjectApiRequest
+): Promise<CreateProjectApiResponse> {
+  return {
+    project: await createProjectInNotion({
       name: input.name
     })
   };

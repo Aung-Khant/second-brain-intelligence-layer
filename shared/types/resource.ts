@@ -1,3 +1,10 @@
+// The core shapes that flow through the classify pipeline: TrustedResourceInput
+// (what the extension/CLI sends in) -> ResourceUnderstanding (derived
+// summary/concepts) -> ClassifiedResource (+ Area/Topic/Project matches) ->
+// IntelligentClassification (+ engine used and any new-Area/Topic
+// suggestions). RelationshipState mirrors the confidence thresholds in
+// config/classification.ts: preselected = auto-checked, suggested = shown
+// but unchecked, hidden = filtered out entirely.
 export type ResourceType =
   | "webpage"
   | "article"

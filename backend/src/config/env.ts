@@ -1,3 +1,7 @@
+// Minimal hand-rolled .env loader (no dotenv dependency). Only sets a var if
+// it isn't already present in process.env, so real environment variables
+// always win over .env file values. Called once at the top of every CLI
+// entry point before anything that needs NOTION_API_KEY/AI_* vars.
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 

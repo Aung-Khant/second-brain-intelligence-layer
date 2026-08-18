@@ -1,3 +1,6 @@
+// The Second Brain's existing structure as read from Notion (or from
+// mock-taxonomy.ts). `definition`/`goal` are the free-text fields the local
+// matcher scores resource text against - see classify-relations.ts.
 export type Area = {
   id: string;
   name: string;

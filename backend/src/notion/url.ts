@@ -1,3 +1,7 @@
+// Normalizes URLs (strips tracking params, fragment, default port, trailing
+// slash, lowercases host) purely for duplicate-Resource detection before
+// saving - two links that differ only by a utm_source param or a trailing
+// slash should be treated as the same saved Resource.
 export function normalizeResourceUrl(url: string): string {
   const parsed = new URL(url);
   parsed.hash = "";

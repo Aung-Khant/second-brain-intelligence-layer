@@ -1,3 +1,17 @@
+// The "Improve" path: sends the resource + full taxonomy to OpenAI or
+// OpenRouter with a strict JSON schema, then normalizes the model's answer
+// back into the app's shape. Two things here have already broken in
+// production and are worth knowing before touching this file:
+// - clampConfidence rescales a 0-1 probability to 0-100, because some models
+//   (seen with DeepSeek via OpenRouter) answer with a 0-1 confidence despite
+//   the prompt/schema asking for an integer 0-100, which used to make every
+//   relation silently fail the visibility threshold and vanish.
+// - max_output_tokens/max_tokens is 2000, not the original 800, because a
+//   resource with several genuine Area/Topic/Project matches (each with its
+//   own reason sentence) can get cut off mid-JSON-string at 800 and fail to
+//   parse ("Unterminated string in JSON").
+// Falls back to the local classifier (see classify-resource.ts) on any
+// failure - see api.ts's enhanceClassificationWithAi.
 import { AppError } from "../../../shared/types/errors.js";
 import type {
   IntelligentClassification,

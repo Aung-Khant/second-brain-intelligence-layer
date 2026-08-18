@@ -1,3 +1,8 @@
+// The one error type used across the whole backend. `code` lets the server
+// (see server/dev-server.ts's toErrorResponse) map a failure to a clean HTTP
+// error instead of a raw 500, and `cause` preserves the original underlying
+// error (e.g. a real Notion API error body) for the detailed message shown
+// to the user without changing the top-level error's type.
 export type AppErrorCode =
   | "PAGE_EXTRACTION_FAILED"
   | "PAGE_IDENTITY_MISMATCH"

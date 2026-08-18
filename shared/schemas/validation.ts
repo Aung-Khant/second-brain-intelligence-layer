@@ -1,3 +1,9 @@
+// Runtime assertion guards (`assertXxx`) for the input/output boundaries of
+// the classify pipeline: TrustedResourceInput coming in, a Taxonomy being
+// used, and a ClassifiedResource going out. These are the checks that catch
+// a malformed request/AI response before it propagates further, throwing
+// AppError with a specific code so the server can map it to a clean HTTP
+// error. See save-validation.ts for the equivalent guards on the save path.
 import type {
   ClassifiedResource,
   RelationSuggestion,

@@ -1,3 +1,7 @@
+// Entry point for the local (non-AI) classification path: validates the
+// input, derives a ResourceUnderstanding (summary/concepts/keywords), scores
+// it against the taxonomy, and validates the output shape before returning.
+// Used directly by the CLI and by the server's fast "Suggest" endpoint.
 import { classifyRelations } from "./classify-relations.js";
 import { understandResource } from "./understand-resource.js";
 import {

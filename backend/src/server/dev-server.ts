@@ -1,3 +1,8 @@
+// Bare-bones HTTP server (no framework) that the Chrome extension calls at
+// http://127.0.0.1:3737. handleApiRequest is the pure routing/dispatch logic
+// (method + pathname -> api.ts handler), kept separate from createDevServer/
+// routeHttpRequest's Node http.Server plumbing so it's directly unit-
+// testable without spinning up a real server - see tests/server.test.ts.
 import http from "node:http";
 import { AppError } from "../../../shared/types/errors.js";
 import {

@@ -1,3 +1,7 @@
+// CLI: `npm run classify -- <file.json>` or pipe JSON via stdin. Classifies a
+// resource against the built-in mock-taxonomy.ts (or a taxonomy embedded in
+// the input) with no Notion or AI calls, and prints the result as JSON. See
+// classify-notion.ts for the version that reads your real Notion taxonomy.
 import { classifyResource } from "../ai/classify-resource.js";
 import { mockTaxonomy } from "../retrieval/mock-taxonomy.js";
 import { readJsonArgumentOrStdin } from "./read-json.js";

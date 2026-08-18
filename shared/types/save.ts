@@ -1,3 +1,6 @@
+// The shape of a Resource after the user has reviewed suggestions and
+// confirmed what to actually save - this is what gets validated by
+// save-validation.ts and written to Notion by notion/save-resource.ts.
 import type { ResourceType, SaveIntent } from "./resource.js";
 
 export type ConfirmedResource = {

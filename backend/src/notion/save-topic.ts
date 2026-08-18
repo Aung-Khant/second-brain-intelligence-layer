@@ -1,3 +1,7 @@
+// Creates a new Topic page in Notion (used when the user accepts a
+// suggested-new-Topic in the extension) using the database's default
+// template, and clears the taxonomy cache so the new Topic is immediately
+// selectable. Mirrors save-area.ts.
 import { AppError } from "../../../shared/types/errors.js";
 import type { CreatedTopic } from "../../../shared/types/resource.js";
 import { NotionClient } from "./client.js";

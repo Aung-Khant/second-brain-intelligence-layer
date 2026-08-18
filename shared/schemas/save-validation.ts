@@ -1,3 +1,8 @@
+// Runtime guard for the final ConfirmedResource shape a user has reviewed
+// and approved for saving - the last checkpoint before Notion writes happen
+// (see notion/save-resource.ts). Requires a Save Intent and a supported
+// resource type; everything else (Areas/Topics/Projects, Why Saved) is
+// optional since the user is allowed to save with nothing selected.
 import type { ConfirmedResource } from "../types/save.js";
 import type { ResourceType, SaveIntent } from "../types/resource.js";
 import { AppError } from "../types/errors.js";

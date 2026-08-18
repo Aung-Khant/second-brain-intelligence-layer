@@ -1,3 +1,8 @@
+// Thin wrapper over the raw Notion HTTP API (data source queries + page
+// creation, with pagination handled in queryDataSource) plus a handful of
+// `getXxx` helpers for pulling plain values out of Notion's verbose property
+// JSON shape. Every other notion/*.ts file goes through this instead of
+// calling fetch() directly.
 import { AppError } from "../../../shared/types/errors.js";
 import type { NotionTaxonomyConfig } from "./config.js";
 

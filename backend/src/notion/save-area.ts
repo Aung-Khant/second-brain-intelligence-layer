@@ -1,3 +1,7 @@
+// Creates a new Area page in Notion (used when the user accepts a suggested-
+// new-Area in the extension) and clears the in-memory taxonomy cache
+// afterward so the next classify/enhance call sees the new Area immediately
+// instead of waiting out the cache TTL.
 import { AppError } from "../../../shared/types/errors.js";
 import type { CreatedArea } from "../../../shared/types/resource.js";
 import { NotionClient } from "./client.js";

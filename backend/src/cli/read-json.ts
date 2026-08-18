@@ -1,3 +1,6 @@
+// Shared helper for the CLI scripts: reads JSON either from a file path
+// given as the first CLI argument, or from stdin when no path is given
+// (e.g. `cat fixture.json | npm run classify`).
 import { readFile } from "node:fs/promises";
 
 export async function readJsonArgumentOrStdin(): Promise<unknown> {

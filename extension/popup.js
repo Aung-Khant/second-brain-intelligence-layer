@@ -1,3 +1,15 @@
+// The Chrome extension popup - all its logic in one plain (unbundled) JS
+// file, talking to the local API server (backend/src/server) over HTTP.
+// Flow: hydrateCurrentPage() extracts the active tab's title/description/
+// creator/visibleText via a content-script injection (extractPage), then
+// classifyCurrentPage() ("Suggest") or enhanceCurrentPage() ("Improve") ask
+// the server to classify it, and saveCurrentPage() writes the confirmed
+// selection to Notion. Area is a single-select flow (accept suggestion /
+// pick manually / create new / skip); Topics and Projects are multi-select
+// checkbox lists, with autoSelectPrimaryRelation auto-checking a cluster of
+// close-scoring Topics rather than forcing a single pick. No bundler here,
+// so this can't import the shared/ TypeScript modules - resource-type
+// inference in particular is a hand-kept copy of shared/resource-detection.ts.
 const apiBaseUrl = "http://127.0.0.1:3737";
 
 const state = {

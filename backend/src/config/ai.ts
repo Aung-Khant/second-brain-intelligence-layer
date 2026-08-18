@@ -1,3 +1,7 @@
+// Reads which AI provider/model/key to use from env vars (AI_PROVIDER,
+// OPENAI_*/OPENROUTER_*). shouldUseAi() is how the server decides whether
+// "Improve" can actually call out, or must go straight to the local
+// fallback - it's just "is an API key present."
 export type AiProvider = "openai" | "openrouter";
 
 export type AiConfig = {

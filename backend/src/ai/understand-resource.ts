@@ -1,3 +1,11 @@
+// Turns a raw TrustedResourceInput into a ResourceUnderstanding (summary,
+// concepts, keywords, subjectMatter) using plain text heuristics - no AI
+// call. Deliberately excludes a YouTube page's visibleText (nav, comments,
+// recommended videos - not the video itself) and strips YouTube's generic
+// platform boilerplate description, using only title/creator/description for
+// video and channel pages. Every other local matcher in this codebase should
+// follow the same YouTube exclusion rule (see classify-relations.ts and
+// area-suggestion-fallback.ts).
 import { classifierConfig } from "../config/classification.js";
 import type {
   ResourceUnderstanding,

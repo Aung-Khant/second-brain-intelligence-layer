@@ -1,3 +1,9 @@
+// The request handlers behind every /api/* route (dev-server.ts just does
+// HTTP plumbing and calls into these). classifyWithNotionTaxonomy is the
+// fast local-only "Suggest" path; enhanceClassificationWithAi is "Improve" -
+// it runs AI and local classification, merges them (AI's relations win on
+// ID collision, local fills in anything AI missed), and falls back to pure
+// local classification with a `fallback.reason` on any AI failure.
 import { classifyResource } from "../ai/classify-resource.js";
 import { ensureAreaSuggestion } from "../ai/area-suggestion-fallback.js";
 import { classifyResourceWithOpenAi } from "../ai/openai-classify-resource.js";

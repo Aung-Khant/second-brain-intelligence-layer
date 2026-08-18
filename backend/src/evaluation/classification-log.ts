@@ -1,3 +1,8 @@
+// Appends one JSON line per successful save to
+// classification-logs/classification.jsonl (gitignored, local only),
+// recording what the classifier/AI suggested vs. what the user actually
+// picked. Not read anywhere yet in-app - it's a data trail for later
+// measuring how good the suggestions actually are in practice.
 import { mkdir, appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { classifierConfig } from "../config/classification.js";

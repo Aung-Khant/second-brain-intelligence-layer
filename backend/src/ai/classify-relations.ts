@@ -1,3 +1,10 @@
+// The local (non-AI) matcher: scores every existing Area/Topic/Project
+// independently against the resource's text using literal keyword overlap,
+// no network calls. Each candidate's confidence is computed on its own, so a
+// resource can legitimately preselect more than one Area/Topic/Project when
+// each clears the threshold - this is what makes local classify fast and
+// deterministic, at the cost of missing anything that needs real semantic
+// understanding (that's what AI Enhance is for).
 import { relationshipThresholds } from "../config/classification.js";
 import { normalizeText } from "./understand-resource.js";
 import type {

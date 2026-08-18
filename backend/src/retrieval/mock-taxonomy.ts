@@ -1,3 +1,8 @@
+// A small hand-written taxonomy used by the plain `classify` CLI, the test
+// suite, and `evaluate` (without --notion) when you don't want to hit real
+// Notion. Names here were originally seeded from the developer's real
+// workspace, which is why they show up again as real IDs when testing
+// against the live Notion taxonomy.
 import type { Taxonomy } from "../../../shared/types/taxonomy.js";
 
 export const mockTaxonomy: Taxonomy = {

@@ -1,3 +1,9 @@
+// Fetches and shapes the Areas/Topics/Projects taxonomy from Notion, with an
+// in-memory cache (default 10 minutes, override with
+// NOTION_TAXONOMY_CACHE_TTL_MS, 0 disables it) and in-flight de-duplication
+// so concurrent classify/enhance calls don't trigger duplicate Notion
+// queries. clearNotionTaxonomyCache() is called after creating a new Area or
+// Topic so it shows up immediately instead of waiting for the TTL.
 import type { Area, Project, ProjectStatus, Taxonomy, Topic } from "../../../shared/types/taxonomy.js";
 import { assertTaxonomy } from "../../../shared/schemas/validation.js";
 import { NotionClient, getCheckbox, getRelationIds, getRichText, getStatus, getTitle } from "./client.js";

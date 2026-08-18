@@ -1,3 +1,11 @@
+// Creates the actual Resource page in Notion once the user hits Save.
+// Checks for a duplicate by normalized URL first (see url.ts) and returns
+// "duplicate" instead of creating a second page for the same link. Property
+// names here (Name, URL, Type, Status, "Save Intent", Areas, Topics,
+// Projects, Description, "Why Saved", Archive, Favorite) must exactly match
+// the Notion database's actual property names - there's no schema
+// validation on the Notion side, so a typo here silently writes to a
+// property that doesn't exist and the field just looks empty in Notion.
 import { AppError } from "../../../shared/types/errors.js";
 import type { ResourceType, SaveIntent } from "../../../shared/types/resource.js";
 import type { ConfirmedResource, SaveResourceResult } from "../../../shared/types/save.js";
@@ -133,7 +141,7 @@ function buildResourceProperties(
   };
 
   if (description) {
-    properties.Descriptioin = {
+    properties.Description = {
       rich_text: [{ text: { content: description } }]
     };
   }

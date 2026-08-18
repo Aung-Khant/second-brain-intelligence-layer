@@ -1,3 +1,8 @@
+// Reads NOTION_API_KEY and the four data source IDs from env, falling back
+// to this repo's own default data source IDs when the corresponding env var
+// isn't set. Note the env var names are NOTION_*_DATA_SOURCE_ID - a
+// differently-named var (e.g. NOTION_*_DATABASE_ID) is silently ignored and
+// the default ID is used instead, since only these exact names are read.
 import { AppError } from "../../../shared/types/errors.js";
 
 export type NotionTaxonomyConfig = {

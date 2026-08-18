@@ -1,3 +1,7 @@
+// CLI: `npm run save:notion -- <file.json>` (add --confirm-write to actually
+// create the page; without it, this is a dry run that prints what would be
+// sent). Saves a pre-confirmed Resource straight into Notion, skipping the
+// extension - useful for testing the save path or scripting a save.
 import { assertConfirmedResource } from "../../../shared/schemas/save-validation.js";
 import type { ConfirmedResource } from "../../../shared/types/save.js";
 import { loadDotEnv } from "../config/env.js";

@@ -1,3 +1,11 @@
+// Last-resort Area guesser. Runs after local rule matching (and after AI
+// matching, on merge) whenever a resource ends up with zero Area matches, so
+// a save never has to go out with no Area at all. Matches against a small
+// fixed list of broad categories using only title/creator/description (never
+// a YouTube page's visibleText - that's page chrome, not the video, and
+// leaking it in caused false matches like tagging an unrelated video as
+// "Computer Science & AI"). Prefers an existing Area if one fits the
+// category, otherwise proposes creating a new one.
 import type {
   IntelligentClassification,
   NewAreaSuggestion,

@@ -1,3 +1,9 @@
+// CLI: `npm run evaluate` (or `npm run evaluate:notion` with --notion).
+// Regression-tests the local classifier against every fixture in
+// tests/gold-dataset/: each fixture pairs a resource with the Area/Topic/
+// Project names it's expected to match, and this script reports which
+// expected matches were found, missed, or unexpectedly added. Exits 1 if
+// anything was missed or unexpectedly added, so it works as a CI-style gate.
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { classifyResource } from "../ai/classify-resource.js";

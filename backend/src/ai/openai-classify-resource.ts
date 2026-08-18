@@ -171,6 +171,7 @@ function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string
     "Projects must be existing active work only. Do not invent new Projects.",
     "Topics may be existing matches, or suggested as new topics in suggestedTopics when no existing topic fits clearly.",
     "Existing Topics take priority over new Topic suggestions when the resource directly names or strongly matches an existing Topic.",
+    "Only suggest creating a new Topic when no existing Topic is a good fit.",
     "Do not force a misleading existing Topic. Prefer suggestedTopics when the concept is genuinely missing.",
     "Do not mention a Project in suggestedWhySaved unless that exact existing Project ID is included in projects.",
     "For YouTube, ignore generic YouTube platform descriptions and summarize the actual video or channel from title and visible text.",
@@ -255,6 +256,8 @@ function normalizeAiClassification(
     throw new AppError("AI_INVALID_OUTPUT", "AI classification must be an object.");
   }
 
+  const topics = normalizeRelations(output.topics, taxonomy.topics);
+
   return {
     engine: provider,
     summary: requiredString(output.summary, "summary"),
@@ -262,12 +265,12 @@ function normalizeAiClassification(
     keywords: stringArray(output.keywords).slice(0, 16),
     subjectMatter: stringArray(output.subjectMatter).slice(0, 16),
     areas: normalizeRelations(output.areas, taxonomy.areas),
-    topics: normalizeRelations(output.topics, taxonomy.topics),
+    topics,
     projects: normalizeRelations(
       output.projects,
       taxonomy.projects.filter((project) => (project.status ?? "active") === "active")
     ),
-    suggestedTopics: normalizeSuggestedTopics(output.suggestedTopics, taxonomy.areas),
+    suggestedTopics: topics.length > 0 ? [] : normalizeSuggestedTopics(output.suggestedTopics, taxonomy.areas),
     suggestedSaveIntent: saveIntents.includes(output.suggestedSaveIntent as SaveIntent)
       ? output.suggestedSaveIntent
       : undefined,

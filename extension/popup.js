@@ -257,6 +257,11 @@ function buildTrustedResource() {
 function buildConfirmedResource() {
   const type = inferResourceType(elements.resourceUrl.value);
   elements.resourceType.value = resourceTypeLabel(type);
+  const saveIntent = elements.saveIntent.value;
+  if (!saveIntent) {
+    elements.saveIntent.focus();
+    throw new Error("Choose a Save Intent before saving to Notion.");
+  }
 
   return {
     name: elements.resourceTitle.value.trim(),
@@ -266,7 +271,7 @@ function buildConfirmedResource() {
     areaIds: selectedIds("areas"),
     topicIds: selectedIds("topics"),
     projectIds: selectedIds("projects"),
-    saveIntent: elements.saveIntent.value,
+    saveIntent,
     whySaved: elements.whySaved.value.trim() || undefined
   };
 }

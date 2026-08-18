@@ -53,6 +53,50 @@ test("creates a Topic page with default template properties", async () => {
         Object.hasOwn(requestBody.properties, "Definition"),
       false
     );
+    assert.equal(
+      requestBody?.properties &&
+        isRecord(requestBody.properties) &&
+        Object.hasOwn(requestBody.properties, "Areas"),
+      false
+    );
+  } finally {
+    clearNotionTaxonomyCache();
+    process.env = previousEnv;
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("returns the Notion create error detail when Topic creation fails", async () => {
+  const previousEnv = { ...process.env };
+  const previousFetch = globalThis.fetch;
+
+  process.env.NOTION_API_KEY = "test-notion-key";
+  clearNotionTaxonomyCache();
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        object: "error",
+        code: "validation_error",
+        message: "Cannot apply default template because no default template is configured."
+      }),
+      { status: 400 }
+    );
+
+  try {
+    const response = await handleApiRequest("POST", "/api/topics", {
+      name: "AI-assisted Learning",
+      areaId: "area-learning",
+      areaName: "Learning & Cognitive Science"
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(
+      isRecord(response.body) &&
+        isRecord(response.body.error) &&
+        String(response.body.error.message).includes("Cannot apply default template"),
+      true
+    );
   } finally {
     clearNotionTaxonomyCache();
     process.env = previousEnv;

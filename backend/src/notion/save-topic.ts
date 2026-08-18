@@ -8,7 +8,6 @@ export type CreateTopicInput = {
   name: string;
   areaId?: string;
   areaName?: string;
-  definition?: string;
 };
 
 export async function createTopicInNotion(input: CreateTopicInput): Promise<CreatedTopic> {
@@ -41,25 +40,11 @@ export async function createTopicInNotion(input: CreateTopicInput): Promise<Crea
 }
 
 function buildTopicProperties(input: CreateTopicInput): Record<string, unknown> {
-  const properties: Record<string, unknown> = {
+  return {
     Name: {
       title: [{ text: { content: normalizeName(input.name) } }]
     }
   };
-
-  if (input.areaId) {
-    properties.Areas = {
-      relation: [{ id: input.areaId }]
-    };
-  }
-
-  if (input.definition) {
-    properties.Definition = {
-      rich_text: [{ text: { content: input.definition } }]
-    };
-  }
-
-  return properties;
 }
 
 function normalizeName(value: string): string {

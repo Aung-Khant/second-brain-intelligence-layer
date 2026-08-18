@@ -109,7 +109,7 @@ function toErrorResponse(error: unknown): JsonResponse {
       body: {
         error: {
           code: error.code,
-          message: error.message
+          message: formatAppErrorMessage(error)
         }
       }
     };
@@ -124,6 +124,17 @@ function toErrorResponse(error: unknown): JsonResponse {
       }
     }
   };
+}
+
+function formatAppErrorMessage(error: AppError): string {
+  const detail = getErrorDetail(error.cause);
+  return detail ? `${error.message} ${detail}` : error.message;
+}
+
+function getErrorDetail(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  if (error.message) return error.message;
+  return getErrorDetail(error.cause);
 }
 
 async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {

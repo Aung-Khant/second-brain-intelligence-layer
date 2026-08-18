@@ -104,10 +104,16 @@ function extractPage() {
     document.querySelector('meta[property="og:description"]')?.content ||
     "";
 
+  const creator =
+    document.querySelector("ytd-video-owner-renderer ytd-channel-name a")?.textContent?.trim() ||
+    document.querySelector("ytd-channel-name#channel-name #text")?.textContent?.trim() ||
+    "";
+
   return {
     title: document.title,
     url: location.href,
     description,
+    creator,
     visibleText: document.body?.innerText?.slice(0, 4000) ?? ""
   };
 }
@@ -260,6 +266,7 @@ function buildTrustedResource() {
     url,
     type,
     title: elements.resourceTitle.value.trim(),
+    creator: state.page?.creator || undefined,
     description: state.page?.description ?? "",
     visibleText: state.page?.visibleText ?? ""
   };
@@ -354,14 +361,23 @@ function shouldShowSummary(classification) {
   );
 }
 
+const autoSelectConfidenceGap = 10;
+
 function autoSelectPrimaryRelation(relations) {
   if (relations.length === 0 || relations.some((relation) => relation.state === "preselected")) {
     return;
   }
 
-  relations.sort(
+  const sorted = relations.sort(
     (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
-  )[0].state = "preselected";
+  );
+  const topConfidence = sorted[0].confidence;
+
+  for (const relation of sorted) {
+    if (topConfidence - relation.confidence <= autoSelectConfidenceGap) {
+      relation.state = "preselected";
+    }
+  }
 }
 
 function renderAreaFlow(classification) {

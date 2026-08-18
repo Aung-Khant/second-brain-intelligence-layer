@@ -147,3 +147,9 @@ Areas work the same way. The popup shows the top suggested Area first; `Accept s
 Projects are never created automatically. You can only attach an existing Project by picking it from the manual Project picker sourced from your Notion database.
 
 The extension also includes manual Area, Topic, and Project pickers sourced from your Notion databases. Confidence scores are only suggestions; you can uncheck them, add the correct database item manually, and then save your final selection.
+
+## Topic Auto-Selection
+
+Topics are scored independently, so a resource that genuinely relates to more than one Topic can have more than one auto-checked. Any Topic scored 90 or above is auto-checked outright. If none reach that bar, the extension auto-checks the closest cluster near the top score (within 10 confidence points) instead of just the single best match, so closely related Topics don't require an extra manual click. Topics well below the top score stay unchecked for manual review.
+
+For YouTube pages, the extension now also captures the channel name from the page and sends it as `creator`, giving both local matching and AI Enhance one more real signal to match against your taxonomy.

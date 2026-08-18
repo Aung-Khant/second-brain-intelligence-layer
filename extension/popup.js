@@ -109,6 +109,7 @@ async function loadTaxonomyPickers() {
       "Choose Project"
     );
   } catch (error) {
+    state.taxonomy = null;
     setStatus(`Could not load manual pickers: ${error.message}`, true);
   } finally {
     setPickerLoading(false);
@@ -301,7 +302,7 @@ function renderClassification(classification) {
   renderRelations(elements.projectsList, "projects", classification.projects);
 }
 
-function addPickedRelation(kind) {
+async function addPickedRelation(kind) {
   ensureClassification();
 
   const selectByKind = {
@@ -310,15 +311,35 @@ function addPickedRelation(kind) {
     projects: elements.projectPicker
   };
 
+  const select = selectByKind[kind];
+  const label = relationKindLabel(kind);
+
+  if (!state.taxonomy) {
+    setStatus("Loading your Notion lists...");
+    await loadTaxonomyPickers();
+  }
+
+  if (!state.taxonomy) {
+    setStatus("Could not add yet because your Notion lists are not loaded.", true);
+    return;
+  }
+
+  if (!select.value) {
+    setStatus(`Choose a ${label} first, then click Add.`, true);
+    return;
+  }
+
   const collectionByKind = {
-    areas: state.taxonomy?.areas ?? [],
-    topics: state.taxonomy?.topics ?? [],
-    projects: state.taxonomy?.projects ?? []
+    areas: state.taxonomy.areas,
+    topics: state.taxonomy.topics,
+    projects: state.taxonomy.projects
   };
 
-  const select = selectByKind[kind];
   const entity = collectionByKind[kind].find((item) => item.id === select.value);
-  if (!entity) return;
+  if (!entity) {
+    setStatus(`That ${label} is not available anymore. Reload the extension and try again.`, true);
+    return;
+  }
 
   state.classification[kind] = upsertManualRelation(state.classification[kind], {
     entityId: entity.id,
@@ -331,6 +352,14 @@ function addPickedRelation(kind) {
   renderRelations(listElementForKind(kind), kind, state.classification[kind]);
   select.value = "";
   setStatus(`${entity.name} selected.`);
+}
+
+function relationKindLabel(kind) {
+  return {
+    areas: "Area",
+    topics: "Topic",
+    projects: "Project"
+  }[kind];
 }
 
 function ensureClassification() {

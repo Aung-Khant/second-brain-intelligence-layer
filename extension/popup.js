@@ -449,38 +449,52 @@ function renderSuggestedTopics(suggestedTopics) {
     createButton.type = "button";
     createButton.className = "smallButton";
     createButton.textContent = "Create Topic";
-    createButton.addEventListener("click", () => createSuggestedTopic(suggestion, createButton));
+    const createStatus = document.createElement("span");
+    createStatus.className = "inlineStatus";
+    createButton.addEventListener("click", () =>
+      createSuggestedTopic(suggestion, createButton, createStatus)
+    );
     item.append(createButton);
+    item.append(createStatus);
 
     elements.newTopicsList.append(item);
   }
 }
 
-async function createSuggestedTopic(suggestion, button) {
+async function createSuggestedTopic(suggestion, button, inlineStatus) {
   button.disabled = true;
   const previousText = button.textContent;
   button.textContent = "Creating...";
+  inlineStatus.textContent = "Creating in Notion...";
+  inlineStatus.dataset.state = "working";
   setStatus(`Creating Topic: ${suggestion.name}`);
 
   try {
     const response = await postJson("/api/topics", {
       name: suggestion.name,
       areaId: suggestion.areaId,
-      areaName: suggestion.areaName,
-      reason: suggestion.reason
+      areaName: suggestion.areaName
     });
 
     addCreatedTopic(response.topic);
     button.textContent = "Created";
+    inlineStatus.textContent = "Created and selected.";
+    inlineStatus.dataset.state = "success";
     setStatus("Topic created and selected.");
   } catch (error) {
     button.disabled = false;
     button.textContent = previousText;
+    inlineStatus.textContent = error.message;
+    inlineStatus.dataset.state = "error";
     setStatus(error.message, true);
   }
 }
 
 function addCreatedTopic(topic) {
+  if (!state.classification) {
+    state.classification = emptyClassification();
+  }
+
   const existingTopics = state.classification?.topics ?? [];
   if (existingTopics.some((item) => item.entityId === topic.id)) return;
 
@@ -499,15 +513,20 @@ function addCreatedTopic(topic) {
 }
 
 async function postJson(path, body, method = "POST") {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: method === "GET" ? undefined : JSON.stringify(body)
-  });
+  let response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: method === "GET" ? undefined : JSON.stringify(body)
+    });
+  } catch {
+    throw new Error("Local server is offline. Run npm run server, then reload the extension.");
+  }
 
-  const payload = await response.json();
+  const payload = await response.json().catch(() => undefined);
   if (!response.ok) {
     throw new Error(payload?.error?.message ?? "Request failed.");
   }

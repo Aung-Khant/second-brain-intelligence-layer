@@ -201,8 +201,7 @@ export async function createApprovedTopic(
     topic: await createTopicInNotion({
       name: input.name,
       areaId: input.areaId,
-      areaName: input.areaName,
-      definition: input.reason
+      areaName: input.areaName
     })
   };
 }

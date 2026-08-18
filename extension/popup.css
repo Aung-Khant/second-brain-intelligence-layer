@@ -278,3 +278,17 @@ button:disabled {
   font-size: 11px;
   font-weight: 700;
 }
+
+.inlineStatus {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.inlineStatus[data-state="success"] {
+  color: #047857;
+}
+
+.inlineStatus[data-state="error"] {
+  color: #b91c1c;
+}

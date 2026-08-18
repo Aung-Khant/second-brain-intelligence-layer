@@ -47,6 +47,12 @@ test("creates a Topic page with default template properties", async () => {
         isRecord(requestBody.properties.Name),
       true
     );
+    assert.equal(
+      requestBody?.properties &&
+        isRecord(requestBody.properties) &&
+        Object.hasOwn(requestBody.properties, "Definition"),
+      false
+    );
   } finally {
     clearNotionTaxonomyCache();
     process.env = previousEnv;

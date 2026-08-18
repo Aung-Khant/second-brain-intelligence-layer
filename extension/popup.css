@@ -199,6 +199,17 @@ button:disabled {
   margin-top: 10px;
 }
 
+.pickerRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pickerRow select {
+  min-width: 0;
+}
+
 .relationList {
   display: grid;
   gap: 6px;

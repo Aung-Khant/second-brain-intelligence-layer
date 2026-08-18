@@ -143,3 +143,5 @@ When AI Enhance succeeds, the extension shows an `AI` badge beside the summary. 
 AI can suggest new Topics when no existing Topic fits, but Phase 6 does not auto-create Topics. Treat those suggestions as review notes until the Topic creation approval flow is added.
 
 Suggested Topics now have an explicit create action in the extension. Clicking `Create Topic` creates a Topic page in Notion with the default Topic template, links it to the suggested Area when available, clears the local taxonomy cache, and selects the new Topic for the Resource you are reviewing.
+
+The extension also includes manual Area, Topic, and Project pickers sourced from your Notion databases. Confidence scores are only suggestions; you can uncheck them, add the correct database item manually, and then save your final selection.

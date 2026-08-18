@@ -2,7 +2,8 @@ const apiBaseUrl = "http://127.0.0.1:3737";
 
 const state = {
   page: null,
-  classification: null
+  classification: null,
+  taxonomy: null
 };
 
 const elements = {
@@ -22,10 +23,16 @@ const elements = {
   saveIntent: document.querySelector("#saveIntent"),
   whySaved: document.querySelector("#whySaved"),
   areasList: document.querySelector("#areasList"),
+  areaPicker: document.querySelector("#areaPicker"),
+  addAreaButton: document.querySelector("#addAreaButton"),
   topicsList: document.querySelector("#topicsList"),
+  topicPicker: document.querySelector("#topicPicker"),
+  addTopicButton: document.querySelector("#addTopicButton"),
   newTopicsGroup: document.querySelector("#newTopicsGroup"),
   newTopicsList: document.querySelector("#newTopicsList"),
-  projectsList: document.querySelector("#projectsList")
+  projectsList: document.querySelector("#projectsList"),
+  projectPicker: document.querySelector("#projectPicker"),
+  addProjectButton: document.querySelector("#addProjectButton")
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -33,7 +40,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   elements.classifyButton.addEventListener("click", classifyCurrentPage);
   elements.enhanceButton.addEventListener("click", enhanceCurrentPage);
   elements.saveButton.addEventListener("click", saveCurrentPage);
+  elements.addAreaButton.addEventListener("click", () => addPickedRelation("areas"));
+  elements.addTopicButton.addEventListener("click", () => addPickedRelation("topics"));
+  elements.addProjectButton.addEventListener("click", () => addPickedRelation("projects"));
   checkServer();
+  loadTaxonomyPickers();
 });
 
 async function hydrateCurrentPage() {
@@ -81,6 +92,55 @@ async function checkServer() {
     elements.serverState.textContent = response.ok ? "Online" : "Offline";
   } catch {
     elements.serverState.textContent = "Offline";
+  }
+}
+
+async function loadTaxonomyPickers() {
+  setPickerLoading(true);
+
+  try {
+    const response = await postJson("/api/taxonomy", undefined, "GET");
+    state.taxonomy = response.taxonomy;
+    renderPicker(elements.areaPicker, state.taxonomy.areas, "Choose Area");
+    renderPicker(elements.topicPicker, state.taxonomy.topics, "Choose Topic");
+    renderPicker(
+      elements.projectPicker,
+      state.taxonomy.projects.filter((project) => (project.status ?? "active") === "active"),
+      "Choose Project"
+    );
+  } catch (error) {
+    setStatus(`Could not load manual pickers: ${error.message}`, true);
+  } finally {
+    setPickerLoading(false);
+  }
+}
+
+function setPickerLoading(isLoading) {
+  for (const element of [
+    elements.areaPicker,
+    elements.topicPicker,
+    elements.projectPicker,
+    elements.addAreaButton,
+    elements.addTopicButton,
+    elements.addProjectButton
+  ]) {
+    element.disabled = isLoading;
+  }
+}
+
+function renderPicker(select, items, placeholder) {
+  select.replaceChildren();
+
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = placeholder;
+  select.append(option);
+
+  for (const item of [...items].sort((a, b) => a.name.localeCompare(b.name))) {
+    const itemOption = document.createElement("option");
+    itemOption.value = item.id;
+    itemOption.textContent = item.name;
+    select.append(itemOption);
   }
 }
 
@@ -200,8 +260,18 @@ function mergePreservingManualSelections(nextClassification) {
 
 function preserveSelectedRelations(nextRelations, kind) {
   const selected = new Set(selectedIds(kind));
-  return nextRelations.map((relation) =>
+  const preserved = nextRelations.map((relation) =>
     selected.has(relation.entityId) ? { ...relation, state: "preselected" } : relation
+  );
+
+  for (const relation of state.classification?.[kind] ?? []) {
+    if (selected.has(relation.entityId) && !preserved.some((item) => item.entityId === relation.entityId)) {
+      preserved.push({ ...relation, state: "preselected" });
+    }
+  }
+
+  return preserved.sort(
+    (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
   );
 }
 
@@ -229,6 +299,78 @@ function renderClassification(classification) {
   renderRelations(elements.topicsList, "topics", classification.topics);
   renderSuggestedTopics(classification.suggestedTopics ?? []);
   renderRelations(elements.projectsList, "projects", classification.projects);
+}
+
+function addPickedRelation(kind) {
+  ensureClassification();
+
+  const selectByKind = {
+    areas: elements.areaPicker,
+    topics: elements.topicPicker,
+    projects: elements.projectPicker
+  };
+
+  const collectionByKind = {
+    areas: state.taxonomy?.areas ?? [],
+    topics: state.taxonomy?.topics ?? [],
+    projects: state.taxonomy?.projects ?? []
+  };
+
+  const select = selectByKind[kind];
+  const entity = collectionByKind[kind].find((item) => item.id === select.value);
+  if (!entity) return;
+
+  state.classification[kind] = upsertManualRelation(state.classification[kind], {
+    entityId: entity.id,
+    entityName: entity.name,
+    confidence: 100,
+    reason: "Manually selected from your Notion database.",
+    state: "preselected"
+  });
+
+  renderRelations(listElementForKind(kind), kind, state.classification[kind]);
+  select.value = "";
+  setStatus(`${entity.name} selected.`);
+}
+
+function ensureClassification() {
+  if (state.classification) return;
+
+  state.classification = {
+    engine: "local",
+    summary: elements.resourceTitle.value.trim(),
+    concepts: [],
+    keywords: [],
+    subjectMatter: [],
+    areas: [],
+    topics: [],
+    projects: [],
+    suggestedTopics: []
+  };
+  renderClassification(state.classification);
+  elements.enhanceButton.disabled = false;
+  elements.saveButton.disabled = false;
+}
+
+function upsertManualRelation(relations, relation) {
+  const existing = relations.find((item) => item.entityId === relation.entityId);
+  if (existing) {
+    return relations.map((item) =>
+      item.entityId === relation.entityId ? { ...item, state: "preselected" } : item
+    );
+  }
+
+  return [...relations, relation].sort(
+    (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
+  );
+}
+
+function listElementForKind(kind) {
+  return {
+    areas: elements.areasList,
+    topics: elements.topicsList,
+    projects: elements.projectsList
+  }[kind];
 }
 
 function renderRelations(container, kind, relations) {
@@ -356,13 +498,13 @@ function addCreatedTopic(topic) {
   renderRelations(elements.topicsList, "topics", state.classification.topics);
 }
 
-async function postJson(path, body) {
+async function postJson(path, body, method = "POST") {
   const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: method === "GET" ? undefined : JSON.stringify(body)
   });
 
   const payload = await response.json();

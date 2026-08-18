@@ -32,6 +32,10 @@ export type ClassifyApiResponse = {
 
 export type EnhanceApiResponse = ClassifyApiResponse;
 
+export type TaxonomyApiResponse = {
+  taxonomy: Taxonomy;
+};
+
 export type SaveApiRequest = {
   resource: ConfirmedResource;
   aiSuggestion?: {
@@ -106,6 +110,12 @@ export async function enhanceClassificationWithAi(
   return {
     resource: input.resource,
     classification: classifyLocal(input.resource, taxonomy)
+  };
+}
+
+export async function readTaxonomyForPicker(): Promise<TaxonomyApiResponse> {
+  return {
+    taxonomy: await fetchNotionTaxonomy()
   };
 }
 

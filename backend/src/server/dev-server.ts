@@ -4,6 +4,7 @@ import {
   classifyWithNotionTaxonomy,
   createApprovedTopic,
   enhanceClassificationWithAi,
+  readTaxonomyForPicker,
   saveConfirmedResource,
   type ClassifyApiRequest,
   type CreateTopicApiRequest,
@@ -57,6 +58,13 @@ export async function handleApiRequest(
       return {
         statusCode: 200,
         body: await enhanceClassificationWithAi(body as ClassifyApiRequest)
+      };
+    }
+
+    if (method === "GET" && pathname === "/api/taxonomy") {
+      return {
+        statusCode: 200,
+        body: await readTaxonomyForPicker()
       };
     }
 

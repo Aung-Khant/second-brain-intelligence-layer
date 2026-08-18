@@ -72,3 +72,55 @@ test("classify endpoint uses local matching for instant results", async () => {
     globalThis.fetch = previousFetch;
   }
 });
+
+test("taxonomy endpoint returns picker data from Notion taxonomy", async () => {
+  const previousEnv = { ...process.env };
+  const previousFetch = globalThis.fetch;
+
+  process.env.NOTION_API_KEY = "test-notion-key";
+  process.env.NOTION_TAXONOMY_CACHE_TTL_MS = "0";
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    const title =
+      url.includes("048d5cf2")
+        ? "Computer Science & AI"
+        : url.includes("4c1d5cf2")
+          ? "Python"
+          : "Learn Python";
+
+    return new Response(
+      JSON.stringify({
+        results: [
+          {
+            id: `${title.toLowerCase().replaceAll(" ", "-")}-id`,
+            url: "https://notion.so/test",
+            properties: {
+              Name: {
+                type: "title",
+                title: [{ plain_text: title }]
+              }
+            }
+          }
+        ],
+        has_more: false,
+        next_cursor: null
+      }),
+      { status: 200 }
+    );
+  };
+
+  try {
+    const response = await handleApiRequest("GET", "/api/taxonomy");
+    assert.equal(response.statusCode, 200);
+    assert.equal(
+      isRecord(response.body) &&
+        isRecord(response.body.taxonomy) &&
+        Array.isArray(response.body.taxonomy.areas),
+      true
+    );
+  } finally {
+    process.env = previousEnv;
+    globalThis.fetch = previousFetch;
+  }
+});

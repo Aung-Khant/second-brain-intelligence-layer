@@ -91,7 +91,7 @@ async function classifyWithOpenAiResponses(
     },
     body: JSON.stringify({
       model: config.model,
-      max_output_tokens: 800,
+      max_output_tokens: 2000,
       input: buildPrompt(resource, taxonomy),
       text: {
         format: {
@@ -147,7 +147,7 @@ async function classifyWithOpenRouter(
       provider: {
         require_parameters: true
       },
-      max_tokens: 800,
+      max_tokens: 2000,
       temperature: 0.1
     })
   });
@@ -181,6 +181,7 @@ function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string
     "Do not mention a Project in suggestedWhySaved unless that exact existing Project ID is included in projects.",
     "For YouTube, ignore generic YouTube platform descriptions and summarize the actual video or channel from title and visible text.",
     "Return concise, useful summary text for the Notion Description field.",
+    "Keep every reason field to one short sentence, well under 20 words.",
     "Every confidence field (in areas, topics, projects, suggestedAreas, suggestedTopics) is a whole number from 0 to 100, never a 0-1 probability like 0.75. Use 90-100 for direct title/name matches, 75-89 for strong semantic matches, 60-74 for weaker but useful suggestions.",
     "",
     `Resource:\n${JSON.stringify(toPromptResource(resource), null, 2)}`,

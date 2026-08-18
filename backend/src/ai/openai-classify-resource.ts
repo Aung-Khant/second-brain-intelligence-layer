@@ -175,12 +175,13 @@ function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string
     "Projects must be existing active work only. Do not invent new Projects.",
     "Topics may be existing matches, or suggested as new topics in suggestedTopics when no existing topic fits clearly.",
     "Existing Topics take priority over new Topic suggestions when the resource directly names or strongly matches an existing Topic.",
+    "Include every existing Topic that is a genuinely strong match, not just the single best one. A resource can legitimately relate to more than one Topic.",
     "Only suggest creating a new Topic when no existing Topic is a good fit.",
     "Do not force a misleading existing Topic. Prefer suggestedTopics when the concept is genuinely missing.",
     "Do not mention a Project in suggestedWhySaved unless that exact existing Project ID is included in projects.",
     "For YouTube, ignore generic YouTube platform descriptions and summarize the actual video or channel from title and visible text.",
     "Return concise, useful summary text for the Notion Description field.",
-    "Confidence guide: 90-100 for direct title/name matches, 75-89 for strong semantic matches, 60-74 for weaker but useful suggestions.",
+    "Every confidence field (in areas, topics, projects, suggestedAreas, suggestedTopics) is a whole number from 0 to 100, never a 0-1 probability like 0.75. Use 90-100 for direct title/name matches, 75-89 for strong semantic matches, 60-74 for weaker but useful suggestions.",
     "",
     `Resource:\n${JSON.stringify(toPromptResource(resource), null, 2)}`,
     "",
@@ -399,9 +400,14 @@ function stringArray(value: unknown): string[] {
 }
 
 function clampConfidence(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? Math.max(0, Math.min(100, value))
-    : 0;
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+
+  // Some models return a 0-1 probability despite the prompt and schema asking
+  // for 0-100. A real 0-100 confidence is never a small fraction in practice
+  // (anything below the "suggested" threshold isn't worth returning at all),
+  // so rescale rather than let it get silently clamped down to near zero.
+  const scaled = value > 0 && value <= 1 ? value * 100 : value;
+  return Math.max(0, Math.min(100, scaled));
 }
 
 function looksLikeIdentifier(value: string): boolean {
@@ -410,12 +416,19 @@ function looksLikeIdentifier(value: string): boolean {
   );
 }
 
+const confidenceSchema = {
+  type: "integer",
+  minimum: 0,
+  maximum: 100,
+  description: "Whole number from 0 to 100. Never a 0-1 probability."
+} as const;
+
 const relationSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
     entityId: { type: "string" },
-    confidence: { type: "number" },
+    confidence: confidenceSchema,
     reason: { type: "string" }
   },
   required: ["entityId", "confidence", "reason"]
@@ -457,7 +470,7 @@ const responseSchema = {
         additionalProperties: false,
         properties: {
           name: { type: "string" },
-          confidence: { type: "number" },
+          confidence: confidenceSchema,
           reason: { type: "string" }
         },
         required: ["name", "confidence", "reason"]
@@ -472,7 +485,7 @@ const responseSchema = {
           name: { type: "string" },
           areaId: { type: "string" },
           areaName: { type: "string" },
-          confidence: { type: "number" },
+          confidence: confidenceSchema,
           reason: { type: "string" }
         },
         required: ["name", "areaId", "areaName", "confidence", "reason"]

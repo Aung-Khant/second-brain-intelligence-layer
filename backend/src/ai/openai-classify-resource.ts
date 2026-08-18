@@ -1,6 +1,7 @@
 import { AppError } from "../../../shared/types/errors.js";
 import type {
   IntelligentClassification,
+  NewAreaSuggestion,
   NewTopicSuggestion,
   RelationSuggestion,
   SaveIntent,
@@ -24,6 +25,7 @@ type OpenAiClassification = {
   areas: OpenAiRelation[];
   topics: OpenAiRelation[];
   projects: OpenAiRelation[];
+  suggestedAreas: NewAreaSuggestion[];
   suggestedTopics: NewTopicSuggestion[];
   suggestedSaveIntent?: SaveIntent;
   suggestedWhySaved?: string;
@@ -168,6 +170,7 @@ function buildPrompt(resource: TrustedResourceInput, taxonomy: Taxonomy): string
     "Areas are broad and stable. Do not invent new Areas.",
     "Choose the smallest accurate set of existing Areas, usually 1. Add a second or third Area only when the title, summary, or main content directly supports it.",
     "Do not choose an Area from generic words like product, market, system, brain, learn, or tool unless the resource is actually about that Area.",
+    "If no existing Area fits, suggest exactly one broad new Area in suggestedAreas. Do not suggest a new Area when an existing Area is a reasonable fit.",
     "Projects must be existing active work only. Do not invent new Projects.",
     "Topics may be existing matches, or suggested as new topics in suggestedTopics when no existing topic fits clearly.",
     "Existing Topics take priority over new Topic suggestions when the resource directly names or strongly matches an existing Topic.",
@@ -256,6 +259,7 @@ function normalizeAiClassification(
     throw new AppError("AI_INVALID_OUTPUT", "AI classification must be an object.");
   }
 
+  const areas = normalizeRelations(output.areas, taxonomy.areas);
   const topics = normalizeRelations(output.topics, taxonomy.topics);
 
   return {
@@ -264,12 +268,13 @@ function normalizeAiClassification(
     concepts: stringArray(output.concepts).slice(0, 12),
     keywords: stringArray(output.keywords).slice(0, 16),
     subjectMatter: stringArray(output.subjectMatter).slice(0, 16),
-    areas: normalizeRelations(output.areas, taxonomy.areas),
+    areas,
     topics,
     projects: normalizeRelations(
       output.projects,
       taxonomy.projects.filter((project) => (project.status ?? "active") === "active")
     ),
+    suggestedAreas: areas.length > 0 ? [] : normalizeSuggestedAreas(output.suggestedAreas, taxonomy.areas),
     suggestedTopics: topics.length > 0 ? [] : normalizeSuggestedTopics(output.suggestedTopics, taxonomy.areas),
     suggestedSaveIntent: saveIntents.includes(output.suggestedSaveIntent as SaveIntent)
       ? output.suggestedSaveIntent
@@ -279,6 +284,33 @@ function normalizeAiClassification(
         ? output.suggestedWhySaved.trim()
         : undefined
   };
+}
+
+function normalizeSuggestedAreas(
+  suggestions: NewAreaSuggestion[] | undefined,
+  existingAreas: Area[]
+): NewAreaSuggestion[] {
+  const existingNames = new Set(existingAreas.map((area) => area.name.toLowerCase()));
+  const seen = new Set<string>();
+  const normalized: NewAreaSuggestion[] = [];
+
+  for (const suggestion of Array.isArray(suggestions) ? suggestions : []) {
+    const name = requiredString(suggestion.name, "suggestedAreas.name").slice(0, 80);
+    const key = name.toLowerCase();
+    if (seen.has(key) || existingNames.has(key)) continue;
+    seen.add(key);
+
+    normalized.push({
+      name,
+      confidence: clampConfidence(suggestion.confidence),
+      reason: requiredString(suggestion.reason, "suggestedAreas.reason")
+    });
+  }
+
+  return normalized
+    .filter((suggestion) => suggestion.confidence >= relationshipThresholds.suggested)
+    .sort((a, b) => b.confidence - a.confidence || a.name.localeCompare(b.name))
+    .slice(0, 1);
 }
 
 function normalizeRelations<T extends Area | Topic | Project>(
@@ -412,6 +444,19 @@ const responseSchema = {
       type: "array",
       items: relationSchema
     },
+    suggestedAreas: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          name: { type: "string" },
+          confidence: { type: "number" },
+          reason: { type: "string" }
+        },
+        required: ["name", "confidence", "reason"]
+      }
+    },
     suggestedTopics: {
       type: "array",
       items: {
@@ -441,6 +486,7 @@ const responseSchema = {
     "areas",
     "topics",
     "projects",
+    "suggestedAreas",
     "suggestedTopics",
     "suggestedSaveIntent",
     "suggestedWhySaved"

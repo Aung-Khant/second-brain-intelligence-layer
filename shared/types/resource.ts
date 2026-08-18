@@ -53,6 +53,12 @@ export type NewTopicSuggestion = {
   reason: string;
 };
 
+export type NewAreaSuggestion = {
+  name: string;
+  confidence: number;
+  reason: string;
+};
+
 export type CreatedTopic = {
   id: string;
   name: string;
@@ -71,6 +77,7 @@ export type IntelligenceEngine = "local" | "openai" | "openrouter";
 
 export type IntelligentClassification = ClassifiedResource & {
   engine: IntelligenceEngine;
+  suggestedAreas: NewAreaSuggestion[];
   suggestedTopics: NewTopicSuggestion[];
   suggestedSaveIntent?: SaveIntent;
   suggestedWhySaved?: string;

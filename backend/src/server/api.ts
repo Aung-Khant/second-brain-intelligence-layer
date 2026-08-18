@@ -137,7 +137,11 @@ function mergeAiWithLocalRelations(
     ...aiClassification,
     areas: mergeRelations(aiClassification.areas, localClassification.areas),
     topics: mergeRelations(aiClassification.topics, localClassification.topics),
-    projects: mergeRelations(aiClassification.projects, localClassification.projects)
+    projects: mergeRelations(aiClassification.projects, localClassification.projects),
+    suggestedAreas:
+      aiClassification.areas.length > 0 || localClassification.areas.length > 0
+        ? []
+        : aiClassification.suggestedAreas
   };
 }
 
@@ -238,6 +242,7 @@ function classifyLocal(
   return {
     ...classification,
     engine: "local",
+    suggestedAreas: [],
     suggestedTopics: []
   };
 }

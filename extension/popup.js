@@ -320,24 +320,32 @@ function renderClassification(classification) {
   elements.summarySection.hidden = false;
   elements.relationsSection.hidden = false;
 
-  renderAreaFlow(classification.areas);
+  renderAreaFlow(classification);
   renderRelations(elements.topicsList, "topics", classification.topics);
   renderSuggestedTopics(classification.suggestedTopics ?? []);
   renderRelations(elements.projectsList, "projects", classification.projects);
 }
 
-function renderAreaFlow(areaSuggestions) {
-  const suggestion = suggestedArea(areaSuggestions);
+function renderAreaFlow(classification) {
+  const suggestion = areaSuggestion(classification);
   elements.areaSuggestionPanel.hidden = !suggestion;
   elements.acceptAreaSuggestionButton.disabled = !suggestion;
-  elements.areaSuggestionEyebrow.textContent =
-    state.classification?.engine === "local" ? "Suggested Area" : "AI Suggested Area";
 
   if (suggestion) {
-    elements.areaSuggestionName.textContent = suggestion.entityName;
+    elements.areaSuggestionEyebrow.textContent =
+      suggestion.kind === "existing"
+        ? classification.engine === "local"
+          ? "Suggested Area"
+          : "AI Suggested Area"
+        : "AI Suggested New Area";
+    elements.acceptAreaSuggestionButton.textContent =
+      suggestion.kind === "existing" ? "Accept suggestion" : "Create suggested Area";
+    elements.areaSuggestionName.textContent = suggestion.name;
     elements.areaSuggestionConfidence.textContent = `${Math.round(suggestion.confidence)}%`;
     elements.areaSuggestionReason.textContent = suggestion.reason;
   } else {
+    elements.areaSuggestionEyebrow.textContent = "Suggested Area";
+    elements.acceptAreaSuggestionButton.textContent = "Accept suggestion";
     elements.areaSuggestionName.textContent = "";
     elements.areaSuggestionConfidence.textContent = "";
     elements.areaSuggestionReason.textContent = "";
@@ -346,10 +354,30 @@ function renderAreaFlow(areaSuggestions) {
   renderSelectedArea();
 }
 
-function suggestedArea(areaSuggestions) {
-  return [...areaSuggestions].sort(
+function areaSuggestion(classification) {
+  const existing = [...classification.areas].sort(
     (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
   )[0];
+  if (existing) {
+    return {
+      kind: "existing",
+      id: existing.entityId,
+      name: existing.entityName,
+      confidence: existing.confidence,
+      reason: existing.reason,
+      relation: existing
+    };
+  }
+
+  const suggested = (classification.suggestedAreas ?? [])[0];
+  if (!suggested) return undefined;
+
+  return {
+    kind: "new",
+    name: suggested.name,
+    confidence: suggested.confidence,
+    reason: suggested.reason
+  };
 }
 
 function renderSelectedArea() {
@@ -393,18 +421,23 @@ function renderSelectedArea() {
 
 function acceptSuggestedArea() {
   ensureClassification();
-  const suggestion = suggestedArea(state.classification.areas);
+  const suggestion = areaSuggestion(state.classification);
   if (!suggestion) {
     setStatus("No Area suggestion is available yet.", true);
     return;
   }
 
+  if (suggestion.kind === "new") {
+    createSuggestedArea(suggestion);
+    return;
+  }
+
   selectArea({
-    ...suggestion,
+    ...suggestion.relation,
     reason: "Accepted AI suggestion.",
     state: "preselected"
   });
-  setStatus(`${suggestion.entityName} selected.`);
+  setStatus(`${suggestion.name} selected.`);
 }
 
 function showManualAreaPicker() {
@@ -493,6 +526,35 @@ async function createNewArea() {
   } finally {
     elements.createAreaButton.disabled = false;
     elements.createAreaButton.textContent = "Create";
+  }
+}
+
+async function createSuggestedArea(suggestion) {
+  elements.acceptAreaSuggestionButton.disabled = true;
+  elements.acceptAreaSuggestionButton.textContent = "Creating...";
+  setStatus(`Creating Area: ${suggestion.name}`);
+
+  try {
+    const response = await postJson("/api/areas", { name: suggestion.name });
+    const area = response.area;
+    addAreaToTaxonomy(area);
+    selectArea({
+      entityId: area.id,
+      entityName: area.name,
+      confidence: 100,
+      reason: "Created from AI Area suggestion.",
+      state: "preselected"
+    });
+    state.classification.suggestedAreas = [];
+    renderAreaFlow(state.classification);
+    setStatus(`${area.name} created and selected.`);
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    elements.acceptAreaSuggestionButton.disabled = !areaSuggestion(state.classification);
+    elements.acceptAreaSuggestionButton.textContent = areaSuggestion(state.classification)
+      ? "Create suggested Area"
+      : "Accept suggestion";
   }
 }
 
@@ -589,6 +651,7 @@ function ensureClassification() {
     areas: [],
     topics: [],
     projects: [],
+    suggestedAreas: [],
     suggestedTopics: []
   };
   renderClassification(state.classification);
@@ -826,7 +889,7 @@ function setBusy(isBusy) {
   elements.enhanceButton.disabled = isBusy || !state.classification;
   elements.saveButton.disabled = isBusy || !state.classification;
   elements.acceptAreaSuggestionButton.disabled =
-    isBusy || !state.classification || !suggestedArea(state.classification.areas);
+    isBusy || !state.classification || !areaSuggestion(state.classification);
   elements.chooseAreaButton.disabled = isBusy;
   elements.showNewAreaButton.disabled = isBusy;
   elements.skipAreaButton.disabled = isBusy;

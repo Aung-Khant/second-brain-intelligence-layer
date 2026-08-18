@@ -45,7 +45,10 @@
 
       <section id="relationsSection" class="relations" hidden>
         <div class="field">
-          <label for="saveIntent">Save Intent</label>
+          <div class="labelRow">
+            <label for="saveIntent">Save Intent</label>
+            <span class="requiredLabel">Required</span>
+          </div>
           <select id="saveIntent">
             <option value="">Choose intent</option>
             <option value="learn">Learn</option>
@@ -64,7 +67,7 @@
         </div>
 
         <div class="relationGroup">
-          <h2>Areas</h2>
+          <h2>Area</h2>
           <div id="areaSuggestionPanel" class="areaSuggestionPanel" hidden>
             <div id="areaSuggestionEyebrow" class="suggestionEyebrow">Suggested Area</div>
             <div class="areaSuggestionHeader">
@@ -76,12 +79,11 @@
           <p id="areaEmptyState" class="empty">No Area selected yet.</p>
           <div class="areaActions">
             <button id="acceptAreaSuggestionButton" class="smallButton" type="button" disabled>Accept suggestion</button>
-            <button id="chooseAreaButton" class="smallButton secondaryButton" type="button">Choose different</button>
+            <button id="chooseAreaButton" class="smallButton secondaryButton" type="button">Change Area</button>
             <button id="skipAreaButton" class="smallButton quietButton" type="button">Skip Area</button>
           </div>
           <div id="areaManualGroup" class="pickerRow" hidden>
             <select id="areaPicker"></select>
-            <button id="addAreaButton" class="smallButton" type="button">Use</button>
             <button id="showNewAreaButton" class="smallButton quietButton" type="button">Create new Area</button>
           </div>
           <div id="newAreaGroup" class="newAreaRow" hidden>
@@ -93,9 +95,8 @@
 
         <div class="relationGroup">
           <h2>Topics</h2>
-          <div class="pickerRow">
+          <div class="singlePickerRow">
             <select id="topicPicker"></select>
-            <button id="addTopicButton" class="smallButton" type="button">Add</button>
           </div>
           <div id="newTopicGroup" class="newAreaRow" hidden>
             <input id="newTopicName" type="text" autocomplete="off" placeholder="New Topic name">
@@ -111,9 +112,8 @@
 
         <div class="relationGroup">
           <h2>Projects</h2>
-          <div class="pickerRow">
+          <div class="singlePickerRow">
             <select id="projectPicker"></select>
-            <button id="addProjectButton" class="smallButton" type="button">Add</button>
           </div>
           <div id="projectsList" class="relationList"></div>
         </div>

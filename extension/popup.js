@@ -40,13 +40,11 @@ const elements = {
   areaManualGroup: document.querySelector("#areaManualGroup"),
   areasList: document.querySelector("#areasList"),
   areaPicker: document.querySelector("#areaPicker"),
-  addAreaButton: document.querySelector("#addAreaButton"),
   newAreaGroup: document.querySelector("#newAreaGroup"),
   newAreaName: document.querySelector("#newAreaName"),
   createAreaButton: document.querySelector("#createAreaButton"),
   topicsList: document.querySelector("#topicsList"),
   topicPicker: document.querySelector("#topicPicker"),
-  addTopicButton: document.querySelector("#addTopicButton"),
   newTopicGroup: document.querySelector("#newTopicGroup"),
   newTopicName: document.querySelector("#newTopicName"),
   createTopicButton: document.querySelector("#createTopicButton"),
@@ -54,7 +52,6 @@ const elements = {
   newTopicsList: document.querySelector("#newTopicsList"),
   projectsList: document.querySelector("#projectsList"),
   projectPicker: document.querySelector("#projectPicker"),
-  addProjectButton: document.querySelector("#addProjectButton")
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -66,11 +63,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   elements.chooseAreaButton.addEventListener("click", showManualAreaPicker);
   elements.showNewAreaButton.addEventListener("click", showNewAreaForm);
   elements.skipAreaButton.addEventListener("click", skipArea);
-  elements.addAreaButton.addEventListener("click", choosePickedArea);
+  elements.areaPicker.addEventListener("change", choosePickedArea);
   elements.createAreaButton.addEventListener("click", createNewArea);
-  elements.addTopicButton.addEventListener("click", () => addPickedRelation("topics"));
+  elements.topicPicker.addEventListener("change", () => addPickedRelation("topics"));
   elements.createTopicButton.addEventListener("click", createNewTopic);
-  elements.addProjectButton.addEventListener("click", () => addPickedRelation("projects"));
+  elements.projectPicker.addEventListener("change", () => addPickedRelation("projects"));
   checkServer();
   loadTaxonomyPickers();
 });
@@ -149,10 +146,8 @@ function setPickerLoading(isLoading) {
     elements.areaPicker,
     elements.topicPicker,
     elements.projectPicker,
-    elements.addAreaButton,
-    elements.addTopicButton,
     elements.createTopicButton,
-    elements.addProjectButton
+    elements.createAreaButton
   ]) {
     element.disabled = isLoading;
   }
@@ -355,7 +350,6 @@ function autoSelectPrimaryRelation(relations) {
 function renderAreaFlow(classification) {
   const suggestion = areaSuggestion(classification);
   elements.areaSuggestionPanel.hidden = !suggestion;
-  elements.acceptAreaSuggestionButton.disabled = !suggestion;
 
   if (!state.areaSelection && !state.areaSkipped && suggestion?.kind === "existing") {
     state.areaSelection = {
@@ -366,6 +360,7 @@ function renderAreaFlow(classification) {
   }
 
   if (suggestion) {
+    const isSelectedSuggestion = isCurrentAreaSuggestion(suggestion);
     elements.areaSuggestionEyebrow.textContent =
       suggestion.kind === "existing"
         ? classification.engine === "local"
@@ -373,19 +368,33 @@ function renderAreaFlow(classification) {
           : "AI Suggested Area"
         : "AI Suggested New Area";
     elements.acceptAreaSuggestionButton.textContent =
-      suggestion.kind === "existing" ? "Accept suggestion" : "Create suggested Area";
+      suggestion.kind === "existing"
+        ? isSelectedSuggestion
+          ? "Selected"
+          : "Accept suggestion"
+        : "Create suggested Area";
+    elements.acceptAreaSuggestionButton.disabled = isSelectedSuggestion;
     elements.areaSuggestionName.textContent = suggestion.name;
     elements.areaSuggestionConfidence.textContent = `${Math.round(suggestion.confidence)}%`;
     elements.areaSuggestionReason.textContent = suggestion.reason;
   } else {
     elements.areaSuggestionEyebrow.textContent = "Suggested Area";
     elements.acceptAreaSuggestionButton.textContent = "Accept suggestion";
+    elements.acceptAreaSuggestionButton.disabled = true;
     elements.areaSuggestionName.textContent = "";
     elements.areaSuggestionConfidence.textContent = "";
     elements.areaSuggestionReason.textContent = "";
   }
 
   renderSelectedArea();
+}
+
+function isCurrentAreaSuggestion(suggestion) {
+  return (
+    suggestion.kind === "existing" &&
+    state.areaSelection?.entityId === suggestion.id &&
+    !state.areaSkipped
+  );
 }
 
 function areaSuggestion(classification) {
@@ -508,12 +517,12 @@ async function choosePickedArea() {
   }
 
   if (!elements.areaPicker.value) {
-    setStatus("Choose an Area first, then click Use.", true);
     return;
   }
 
   if (elements.areaPicker.value === createNewAreaValue) {
     showNewAreaForm();
+    elements.areaPicker.value = "";
     return;
   }
 
@@ -641,12 +650,12 @@ async function addPickedRelation(kind) {
   }
 
   if (!select.value) {
-    setStatus(`Choose a ${label} first, then click Add.`, true);
     return;
   }
 
   if (kind === "topics" && select.value === createNewTopicValue) {
     showNewTopicForm();
+    select.value = "";
     return;
   }
 
@@ -980,14 +989,13 @@ function setBusy(isBusy) {
   elements.classifyButton.disabled = isBusy;
   elements.enhanceButton.disabled = isBusy || !state.classification;
   elements.saveButton.disabled = isBusy || !state.classification;
+  const currentSuggestion = state.classification ? areaSuggestion(state.classification) : undefined;
   elements.acceptAreaSuggestionButton.disabled =
-    isBusy || !state.classification || !areaSuggestion(state.classification);
+    isBusy || !currentSuggestion || isCurrentAreaSuggestion(currentSuggestion);
   elements.chooseAreaButton.disabled = isBusy;
   elements.showNewAreaButton.disabled = isBusy;
   elements.skipAreaButton.disabled = isBusy;
-  elements.addAreaButton.disabled = isBusy;
   elements.createAreaButton.disabled = isBusy;
-  elements.addTopicButton.disabled = isBusy;
   elements.createTopicButton.disabled = isBusy;
 }
 

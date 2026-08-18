@@ -97,6 +97,20 @@ label {
   font-weight: 650;
 }
 
+.labelRow {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.requiredLabel {
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 input,
 select,
 textarea {
@@ -217,8 +231,12 @@ button:disabled {
 
 .pickerRow {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr;
   gap: 8px;
+  margin-bottom: 8px;
+}
+
+.singlePickerRow {
   margin-bottom: 8px;
 }
 
@@ -227,7 +245,6 @@ button:disabled {
 }
 
 .pickerRow .quietButton {
-  grid-column: 1 / 3;
   justify-self: start;
 }
 
@@ -257,8 +274,8 @@ button:disabled {
 }
 
 .areaActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
   gap: 6px;
   margin: 8px 0;
 }

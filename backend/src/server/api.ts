@@ -1,4 +1,5 @@
 import { classifyResource } from "../ai/classify-resource.js";
+import { ensureAreaSuggestion } from "../ai/area-suggestion-fallback.js";
 import { classifyResourceWithOpenAi } from "../ai/openai-classify-resource.js";
 import { shouldUseAi } from "../config/ai.js";
 import { appendClassificationLog } from "../evaluation/classification-log.js";
@@ -101,7 +102,9 @@ export async function enhanceClassificationWithAi(
         resource: input.resource,
         classification: mergeAiWithLocalRelations(
           await classifyResourceWithOpenAi(input.resource, taxonomy),
-          localClassification
+          localClassification,
+          input.resource,
+          taxonomy
         )
       };
     } catch (error) {
@@ -131,18 +134,24 @@ export async function readTaxonomyForPicker(): Promise<TaxonomyApiResponse> {
 
 function mergeAiWithLocalRelations(
   aiClassification: IntelligentClassification,
-  localClassification: IntelligentClassification
+  localClassification: IntelligentClassification,
+  resource: TrustedResourceInput,
+  taxonomy: Taxonomy
 ): IntelligentClassification {
-  return {
-    ...aiClassification,
-    areas: mergeRelations(aiClassification.areas, localClassification.areas),
-    topics: mergeRelations(aiClassification.topics, localClassification.topics),
-    projects: mergeRelations(aiClassification.projects, localClassification.projects),
-    suggestedAreas:
-      aiClassification.areas.length > 0 || localClassification.areas.length > 0
-        ? []
-        : aiClassification.suggestedAreas
-  };
+  return ensureAreaSuggestion(
+    {
+      ...aiClassification,
+      areas: mergeRelations(aiClassification.areas, localClassification.areas),
+      topics: mergeRelations(aiClassification.topics, localClassification.topics),
+      projects: mergeRelations(aiClassification.projects, localClassification.projects),
+      suggestedAreas:
+        aiClassification.areas.length > 0 || localClassification.areas.length > 0
+          ? []
+          : aiClassification.suggestedAreas
+    },
+    resource,
+    taxonomy
+  );
 }
 
 function mergeRelations(
@@ -239,10 +248,14 @@ function classifyLocal(
     taxonomy
   });
 
-  return {
-    ...classification,
-    engine: "local",
-    suggestedAreas: [],
-    suggestedTopics: []
-  };
+  return ensureAreaSuggestion(
+    {
+      ...classification,
+      engine: "local",
+      suggestedAreas: [],
+      suggestedTopics: []
+    },
+    resource,
+    taxonomy
+  );
 }

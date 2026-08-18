@@ -2,11 +2,13 @@ import http from "node:http";
 import { AppError } from "../../../shared/types/errors.js";
 import {
   classifyWithNotionTaxonomy,
+  createApprovedArea,
   createApprovedTopic,
   enhanceClassificationWithAi,
   readTaxonomyForPicker,
   saveConfirmedResource,
   type ClassifyApiRequest,
+  type CreateAreaApiRequest,
   type CreateTopicApiRequest,
   type SaveApiRequest
 } from "./api.js";
@@ -79,6 +81,13 @@ export async function handleApiRequest(
       return {
         statusCode: 200,
         body: await createApprovedTopic(body as CreateTopicApiRequest)
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/areas") {
+      return {
+        statusCode: 200,
+        body: await createApprovedArea(body as CreateAreaApiRequest)
       };
     }
 

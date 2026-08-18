@@ -65,11 +65,30 @@
 
         <div class="relationGroup">
           <h2>Areas</h2>
-          <div class="pickerRow">
-            <select id="areaPicker"></select>
-            <button id="addAreaButton" class="smallButton" type="button">Add</button>
+          <div id="areaSuggestionPanel" class="areaSuggestionPanel" hidden>
+            <div id="areaSuggestionEyebrow" class="suggestionEyebrow">Suggested Area</div>
+            <div class="areaSuggestionHeader">
+              <span id="areaSuggestionName" class="relationName"></span>
+              <span id="areaSuggestionConfidence" class="confidence"></span>
+            </div>
+            <p id="areaSuggestionReason" class="relationReason"></p>
           </div>
-          <div id="areasList" class="relationList"></div>
+          <p id="areaEmptyState" class="empty">No Area selected yet.</p>
+          <div class="areaActions">
+            <button id="acceptAreaSuggestionButton" class="smallButton" type="button" disabled>Accept suggestion</button>
+            <button id="chooseAreaButton" class="smallButton secondaryButton" type="button">Choose different</button>
+            <button id="showNewAreaButton" class="smallButton secondaryButton" type="button">Create new Area</button>
+            <button id="skipAreaButton" class="smallButton quietButton" type="button">Skip Area</button>
+          </div>
+          <div id="areaManualGroup" class="pickerRow" hidden>
+            <select id="areaPicker"></select>
+            <button id="addAreaButton" class="smallButton" type="button">Use</button>
+          </div>
+          <div id="newAreaGroup" class="newAreaRow" hidden>
+            <input id="newAreaName" type="text" autocomplete="off" placeholder="New Area name">
+            <button id="createAreaButton" class="smallButton" type="button">Create</button>
+          </div>
+          <div id="areasList" class="relationList areaSelectionList"></div>
         </div>
 
         <div class="relationGroup">

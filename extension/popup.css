@@ -164,6 +164,18 @@ button:disabled {
   width: fit-content;
 }
 
+.secondaryButton {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.quietButton {
+  background: transparent;
+  color: #64748b;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
 .smallButton:disabled {
   background: #e2e8f0;
   color: #64748b;
@@ -208,6 +220,71 @@ button:disabled {
 
 .pickerRow select {
   min-width: 0;
+}
+
+.areaSuggestionPanel {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+  padding: 9px;
+}
+
+.suggestionEyebrow {
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.areaSuggestionHeader {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.areaActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.newAreaRow {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  margin-bottom: 8px;
+}
+
+.selectedAreaItem {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 1fr auto;
+  padding: 9px;
+}
+
+.selectedAreaSource {
+  color: #64748b;
+  font-size: 11px;
+  grid-column: 1 / 2;
+  line-height: 1.35;
+}
+
+.iconTextButton {
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  min-height: auto;
+  padding: 2px 0;
 }
 
 .relationList {

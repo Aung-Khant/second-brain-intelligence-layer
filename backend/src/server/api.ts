@@ -3,6 +3,7 @@ import { classifyResourceWithOpenAi } from "../ai/openai-classify-resource.js";
 import { shouldUseAi } from "../config/ai.js";
 import { appendClassificationLog } from "../evaluation/classification-log.js";
 import { checkDuplicateResourceInNotion, saveResourceToNotion } from "../notion/save-resource.js";
+import { createAreaInNotion } from "../notion/save-area.js";
 import { createTopicInNotion } from "../notion/save-topic.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
 import { assertConfirmedResource } from "../../../shared/schemas/save-validation.js";
@@ -11,6 +12,7 @@ import type {
   ClassifiedResource,
   IntelligentClassification,
   RelationSuggestion,
+  CreatedArea,
   CreatedTopic,
   TrustedResourceInput
 } from "../../../shared/types/resource.js";
@@ -64,6 +66,14 @@ export type CreateTopicApiRequest = {
 
 export type CreateTopicApiResponse = {
   topic: CreatedTopic;
+};
+
+export type CreateAreaApiRequest = {
+  name: string;
+};
+
+export type CreateAreaApiResponse = {
+  area: CreatedArea;
 };
 
 export async function classifyWithNotionTaxonomy(
@@ -202,6 +212,16 @@ export async function createApprovedTopic(
       name: input.name,
       areaId: input.areaId,
       areaName: input.areaName
+    })
+  };
+}
+
+export async function createApprovedArea(
+  input: CreateAreaApiRequest
+): Promise<CreateAreaApiResponse> {
+  return {
+    area: await createAreaInNotion({
+      name: input.name
     })
   };
 }

@@ -61,6 +61,12 @@ export type CreatedTopic = {
   areaName?: string;
 };
 
+export type CreatedArea = {
+  id: string;
+  name: string;
+  url: string;
+};
+
 export type IntelligenceEngine = "local" | "openai" | "openrouter";
 
 export type IntelligentClassification = ClassifiedResource & {

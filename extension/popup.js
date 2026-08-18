@@ -3,7 +3,9 @@ const apiBaseUrl = "http://127.0.0.1:3737";
 const state = {
   page: null,
   classification: null,
-  taxonomy: null
+  taxonomy: null,
+  areaSelection: null,
+  areaSkipped: false
 };
 
 const elements = {
@@ -22,9 +24,23 @@ const elements = {
   relationsSection: document.querySelector("#relationsSection"),
   saveIntent: document.querySelector("#saveIntent"),
   whySaved: document.querySelector("#whySaved"),
+  areaSuggestionPanel: document.querySelector("#areaSuggestionPanel"),
+  areaSuggestionEyebrow: document.querySelector("#areaSuggestionEyebrow"),
+  areaSuggestionName: document.querySelector("#areaSuggestionName"),
+  areaSuggestionConfidence: document.querySelector("#areaSuggestionConfidence"),
+  areaSuggestionReason: document.querySelector("#areaSuggestionReason"),
+  areaEmptyState: document.querySelector("#areaEmptyState"),
+  acceptAreaSuggestionButton: document.querySelector("#acceptAreaSuggestionButton"),
+  chooseAreaButton: document.querySelector("#chooseAreaButton"),
+  showNewAreaButton: document.querySelector("#showNewAreaButton"),
+  skipAreaButton: document.querySelector("#skipAreaButton"),
+  areaManualGroup: document.querySelector("#areaManualGroup"),
   areasList: document.querySelector("#areasList"),
   areaPicker: document.querySelector("#areaPicker"),
   addAreaButton: document.querySelector("#addAreaButton"),
+  newAreaGroup: document.querySelector("#newAreaGroup"),
+  newAreaName: document.querySelector("#newAreaName"),
+  createAreaButton: document.querySelector("#createAreaButton"),
   topicsList: document.querySelector("#topicsList"),
   topicPicker: document.querySelector("#topicPicker"),
   addTopicButton: document.querySelector("#addTopicButton"),
@@ -40,7 +56,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   elements.classifyButton.addEventListener("click", classifyCurrentPage);
   elements.enhanceButton.addEventListener("click", enhanceCurrentPage);
   elements.saveButton.addEventListener("click", saveCurrentPage);
-  elements.addAreaButton.addEventListener("click", () => addPickedRelation("areas"));
+  elements.acceptAreaSuggestionButton.addEventListener("click", acceptSuggestedArea);
+  elements.chooseAreaButton.addEventListener("click", showManualAreaPicker);
+  elements.showNewAreaButton.addEventListener("click", showNewAreaForm);
+  elements.skipAreaButton.addEventListener("click", skipArea);
+  elements.addAreaButton.addEventListener("click", choosePickedArea);
+  elements.createAreaButton.addEventListener("click", createNewArea);
   elements.addTopicButton.addEventListener("click", () => addPickedRelation("topics"));
   elements.addProjectButton.addEventListener("click", () => addPickedRelation("projects"));
   checkServer();
@@ -153,6 +174,8 @@ async function classifyCurrentPage() {
     const resource = buildTrustedResource();
     const response = await postJson("/api/classify", { resource });
     state.classification = response.classification;
+    state.areaSelection = null;
+    state.areaSkipped = false;
     renderClassification(response.classification);
     elements.enhanceButton.disabled = false;
     elements.saveButton.disabled = false;
@@ -277,6 +300,10 @@ function preserveSelectedRelations(nextRelations, kind) {
 }
 
 function selectedIds(kind) {
+  if (kind === "areas") {
+    return state.areaSelection ? [state.areaSelection.entityId] : [];
+  }
+
   return Array.from(document.querySelectorAll(`input[data-kind="${kind}"]:checked`)).map(
     (input) => input.value
   );
@@ -288,10 +315,201 @@ function renderClassification(classification) {
   elements.summarySection.hidden = false;
   elements.relationsSection.hidden = false;
 
-  renderRelations(elements.areasList, "areas", classification.areas);
+  renderAreaFlow(classification.areas);
   renderRelations(elements.topicsList, "topics", classification.topics);
   renderSuggestedTopics(classification.suggestedTopics ?? []);
   renderRelations(elements.projectsList, "projects", classification.projects);
+}
+
+function renderAreaFlow(areaSuggestions) {
+  const suggestion = suggestedArea(areaSuggestions);
+  elements.areaSuggestionPanel.hidden = !suggestion;
+  elements.acceptAreaSuggestionButton.disabled = !suggestion;
+  elements.areaSuggestionEyebrow.textContent =
+    state.classification?.engine === "local" ? "Suggested Area" : "AI Suggested Area";
+
+  if (suggestion) {
+    elements.areaSuggestionName.textContent = suggestion.entityName;
+    elements.areaSuggestionConfidence.textContent = `${Math.round(suggestion.confidence)}%`;
+    elements.areaSuggestionReason.textContent = suggestion.reason;
+  } else {
+    elements.areaSuggestionName.textContent = "";
+    elements.areaSuggestionConfidence.textContent = "";
+    elements.areaSuggestionReason.textContent = "";
+  }
+
+  renderSelectedArea();
+}
+
+function suggestedArea(areaSuggestions) {
+  return [...areaSuggestions].sort(
+    (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
+  )[0];
+}
+
+function renderSelectedArea() {
+  elements.areasList.replaceChildren();
+
+  if (!state.areaSelection) {
+    elements.areaEmptyState.textContent = state.areaSkipped
+      ? "Area skipped for this save."
+      : "No Area selected yet.";
+    elements.areaEmptyState.hidden = false;
+    return;
+  }
+
+  elements.areaEmptyState.hidden = true;
+
+  const item = document.createElement("div");
+  item.className = "selectedAreaItem";
+
+  const name = document.createElement("span");
+  name.className = "relationName";
+  name.textContent = state.areaSelection.entityName;
+
+  const source = document.createElement("span");
+  source.className = "selectedAreaSource";
+  source.textContent = state.areaSelection.reason;
+
+  const removeButton = document.createElement("button");
+  removeButton.type = "button";
+  removeButton.className = "iconTextButton";
+  removeButton.textContent = "Remove";
+  removeButton.addEventListener("click", () => {
+    state.areaSelection = null;
+    state.areaSkipped = false;
+    renderSelectedArea();
+    setStatus("Area removed.");
+  });
+
+  item.append(name, source, removeButton);
+  elements.areasList.append(item);
+}
+
+function acceptSuggestedArea() {
+  ensureClassification();
+  const suggestion = suggestedArea(state.classification.areas);
+  if (!suggestion) {
+    setStatus("No Area suggestion is available yet.", true);
+    return;
+  }
+
+  selectArea({
+    ...suggestion,
+    reason: "Accepted AI suggestion.",
+    state: "preselected"
+  });
+  setStatus(`${suggestion.entityName} selected.`);
+}
+
+function showManualAreaPicker() {
+  elements.areaManualGroup.hidden = false;
+  elements.newAreaGroup.hidden = true;
+  elements.areaPicker.focus();
+}
+
+function showNewAreaForm() {
+  elements.newAreaGroup.hidden = false;
+  elements.areaManualGroup.hidden = true;
+  elements.newAreaName.focus();
+}
+
+function skipArea() {
+  ensureClassification();
+  state.areaSelection = null;
+  state.areaSkipped = true;
+  renderSelectedArea();
+  setStatus("Area skipped. This item can still be saved.");
+}
+
+async function choosePickedArea() {
+  ensureClassification();
+
+  if (!state.taxonomy) {
+    setStatus("Loading your Notion Areas...");
+    await loadTaxonomyPickers();
+  }
+
+  if (!state.taxonomy) {
+    setStatus("Could not choose an Area because your Notion lists are not loaded.", true);
+    return;
+  }
+
+  if (!elements.areaPicker.value) {
+    setStatus("Choose an Area first, then click Use.", true);
+    return;
+  }
+
+  const area = state.taxonomy.areas.find((item) => item.id === elements.areaPicker.value);
+  if (!area) {
+    setStatus("That Area is not available anymore. Reload the extension and try again.", true);
+    return;
+  }
+
+  selectArea({
+    entityId: area.id,
+    entityName: area.name,
+    confidence: 100,
+    reason: "Chosen from your Notion Areas.",
+    state: "preselected"
+  });
+  elements.areaPicker.value = "";
+  setStatus(`${area.name} selected.`);
+}
+
+async function createNewArea() {
+  ensureClassification();
+  const name = elements.newAreaName.value.trim();
+  if (!name) {
+    setStatus("Enter a name for the new Area.", true);
+    return;
+  }
+
+  elements.createAreaButton.disabled = true;
+  elements.createAreaButton.textContent = "Creating...";
+  setStatus(`Creating Area: ${name}`);
+
+  try {
+    const response = await postJson("/api/areas", { name });
+    const area = response.area;
+    addAreaToTaxonomy(area);
+    selectArea({
+      entityId: area.id,
+      entityName: area.name,
+      confidence: 100,
+      reason: "Created as a new Notion Area.",
+      state: "preselected"
+    });
+    elements.newAreaName.value = "";
+    elements.newAreaGroup.hidden = true;
+    setStatus(`${area.name} created and selected.`);
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    elements.createAreaButton.disabled = false;
+    elements.createAreaButton.textContent = "Create";
+  }
+}
+
+function addAreaToTaxonomy(area) {
+  if (!state.taxonomy) {
+    state.taxonomy = {
+      areas: [],
+      topics: [],
+      projects: []
+    };
+  }
+
+  if (!state.taxonomy.areas.some((item) => item.id === area.id)) {
+    state.taxonomy.areas = [...state.taxonomy.areas, area];
+    renderPicker(elements.areaPicker, state.taxonomy.areas, "Choose Area");
+  }
+}
+
+function selectArea(relation) {
+  state.areaSelection = relation;
+  state.areaSkipped = false;
+  renderSelectedArea();
 }
 
 async function addPickedRelation(kind) {
@@ -602,6 +820,13 @@ function setBusy(isBusy) {
   elements.classifyButton.disabled = isBusy;
   elements.enhanceButton.disabled = isBusy || !state.classification;
   elements.saveButton.disabled = isBusy || !state.classification;
+  elements.acceptAreaSuggestionButton.disabled =
+    isBusy || !state.classification || !suggestedArea(state.classification.areas);
+  elements.chooseAreaButton.disabled = isBusy;
+  elements.showNewAreaButton.disabled = isBusy;
+  elements.skipAreaButton.disabled = isBusy;
+  elements.addAreaButton.disabled = isBusy;
+  elements.createAreaButton.disabled = isBusy;
 }
 
 function setStatus(message, isError = false) {

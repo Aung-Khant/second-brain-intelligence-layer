@@ -100,12 +100,15 @@ function firstMatchingCategory(
   classification: IntelligentClassification,
   resource: TrustedResourceInput
 ): AreaCategory | undefined {
+  const shouldUseVisibleText =
+    resource.type !== "youtube_video" && resource.type !== "youtube_channel";
+
   const bag = normalizeText(
     [
       resource.title,
       resource.creator,
       resource.description,
-      resource.visibleText,
+      shouldUseVisibleText ? resource.visibleText : undefined,
       classification.summary,
       classification.concepts.join(" "),
       classification.keywords.join(" "),

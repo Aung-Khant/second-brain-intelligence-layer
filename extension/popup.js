@@ -214,11 +214,14 @@ async function enhanceCurrentPage() {
     state.classification = mergePreservingManualSelections(response.classification);
     renderClassification(state.classification);
     elements.saveButton.disabled = false;
-    setStatus(
-      response.fallback
-        ? "Could not improve right now. You can still review and save."
-        : "Improved suggestions ready. Review, then save."
-    );
+    if (response.fallback) {
+      setStatus(
+        `Could not improve right now (${response.fallback.reason}). You can still review and save.`,
+        true
+      );
+    } else {
+      setStatus("Improved suggestions ready. Review, then save.");
+    }
   } catch (error) {
     setStatus(error.message, true);
   } finally {

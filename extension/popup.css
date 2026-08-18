@@ -199,6 +199,16 @@ button:disabled {
   color: #64748b;
 }
 
+#acceptAreaSuggestionButton {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+#acceptAreaSuggestionButton:disabled {
+  background: #dcfce7;
+  color: #15803d;
+}
+
 .status {
   color: #64748b;
   font-size: 12px;

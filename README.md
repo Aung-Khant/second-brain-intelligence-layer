@@ -7,11 +7,11 @@ This milestone intentionally implements only:
 - shared internal schemas
 - mock taxonomy
 - resource understanding
-- relationship classification
+- relationship classification (local rule-based, with optional AI Enhance)
 - structured output validation
 - CLI/test harness
-- Notion taxonomy reads
-- confirmed Resource saves into Notion
+- Notion taxonomy reads, cached in memory
+- confirmed Resource saves into Notion, with user-approved Area and Topic creation
 - local Chrome extension MVP
 
 ## Setup
@@ -140,8 +140,10 @@ The main `Classify` button is intentionally fast and local-first. It uses the ca
 
 When AI Enhance succeeds, the extension shows an `AI` badge beside the summary. If the AI request fails, the server falls back to local matching and the popup tells you local matching was used.
 
-AI can suggest new Topics when no existing Topic fits, but Phase 6 does not auto-create Topics. Treat those suggestions as review notes until the Topic creation approval flow is added.
+AI can suggest new Topics when no existing Topic fits. Nothing is created automatically — suggested Topics have an explicit create action in the extension. Clicking `Create Topic` creates a Topic page in Notion with the default Topic template, links it to the suggested Area when available, clears the local taxonomy cache, and selects the new Topic for the Resource you are reviewing.
 
-Suggested Topics now have an explicit create action in the extension. Clicking `Create Topic` creates a Topic page in Notion with the default Topic template, links it to the suggested Area when available, clears the local taxonomy cache, and selects the new Topic for the Resource you are reviewing.
+Areas work the same way. The popup shows the top suggested Area first; `Accept suggestion` selects an existing Area, and `Create suggested Area` creates a new Area page in Notion when the suggestion doesn't match anything you already have. You can also open the manual picker to choose a different Area, type your own new Area name, or skip Area assignment entirely for this save.
+
+Projects are never created automatically. You can only attach an existing Project by picking it from the manual Project picker sourced from your Notion database.
 
 The extension also includes manual Area, Topic, and Project pickers sourced from your Notion databases. Confidence scores are only suggestions; you can uncheck them, add the correct database item manually, and then save your final selection.

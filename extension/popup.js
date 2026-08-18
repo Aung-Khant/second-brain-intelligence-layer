@@ -92,6 +92,7 @@ async function hydrateCurrentPage() {
     elements.resourceUrl.value = state.page.url;
     elements.resourceType.value = resourceTypeLabel(inferResourceType(state.page.url));
     elements.pageHost.textContent = hostFromUrl(state.page.url);
+    updatePageReadiness();
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -114,7 +115,7 @@ function extractPage() {
 async function checkServer() {
   try {
     const response = await fetch(`${apiBaseUrl}/health`);
-    elements.serverState.textContent = response.ok ? "Online" : "Offline";
+    elements.serverState.textContent = response.ok ? "Ready" : "Offline";
   } catch {
     elements.serverState.textContent = "Offline";
   }
@@ -178,7 +179,7 @@ function renderPicker(select, items, placeholder, createLabel, createValue) {
 
 async function classifyCurrentPage() {
   setBusy(true);
-  setStatus("Matching with your Notion taxonomy...");
+  setStatus("Getting suggestions...");
 
   try {
     const resource = buildTrustedResource();
@@ -189,7 +190,7 @@ async function classifyCurrentPage() {
     renderClassification(response.classification);
     elements.enhanceButton.disabled = false;
     elements.saveButton.disabled = false;
-    setStatus("Fast local match ready. Use AI Enhance only if needed.");
+    setStatus("Suggestions ready. Review, adjust, then save.");
   } catch (error) {
     setStatus(error.message, true);
   } finally {
@@ -199,7 +200,7 @@ async function classifyCurrentPage() {
 
 async function enhanceCurrentPage() {
   setBusy(true);
-  setStatus("Enhancing with AI...");
+  setStatus("Improving suggestions...");
 
   try {
     const resource = buildTrustedResource();
@@ -209,8 +210,8 @@ async function enhanceCurrentPage() {
     elements.saveButton.disabled = false;
     setStatus(
       response.fallback
-        ? "AI was unavailable, so local matching was used."
-        : "AI enhanced. Review, then save."
+        ? "Could not improve right now. You can still review and save."
+        : "Improved suggestions ready. Review, then save."
     );
   } catch (error) {
     setStatus(error.message, true);
@@ -326,8 +327,8 @@ function selectedIds(kind) {
 
 function renderClassification(classification) {
   elements.summary.textContent = classification.summary;
-  elements.engineBadge.textContent = classification.engine === "local" ? "Local" : "AI";
-  elements.summarySection.hidden = false;
+  elements.engineBadge.hidden = true;
+  elements.summarySection.hidden = !shouldShowSummary(classification);
   elements.relationsSection.hidden = false;
 
   renderAreaFlow(classification);
@@ -335,6 +336,22 @@ function renderClassification(classification) {
   renderRelations(elements.topicsList, "topics", classification.topics);
   renderSuggestedTopics(classification.suggestedTopics ?? []);
   renderRelations(elements.projectsList, "projects", classification.projects);
+}
+
+function shouldShowSummary(classification) {
+  if (classification.engine !== "local") return true;
+
+  const title = elements.resourceTitle.value.trim();
+  const summary = classification.summary.trim();
+  const normalizedTitle = title.replace(/^\(\d+\)\s*/, "").replace(/\s+-\s+YouTube$/i, "").trim();
+
+  return Boolean(
+    summary &&
+      summary !== title &&
+      summary !== normalizedTitle &&
+      summary !== `YouTube video: ${normalizedTitle}.` &&
+      summary !== `YouTube channel: ${normalizedTitle}.`
+  );
 }
 
 function autoSelectPrimaryRelation(relations) {
@@ -363,10 +380,8 @@ function renderAreaFlow(classification) {
     const isSelectedSuggestion = isCurrentAreaSuggestion(suggestion);
     elements.areaSuggestionEyebrow.textContent =
       suggestion.kind === "existing"
-        ? classification.engine === "local"
-          ? "Suggested Area"
-          : "AI Suggested Area"
-        : "AI Suggested New Area";
+        ? "Suggested Area"
+        : "Suggested New Area";
     elements.acceptAreaSuggestionButton.textContent =
       suggestion.kind === "existing"
         ? isSelectedSuggestion
@@ -477,7 +492,7 @@ function acceptSuggestedArea() {
 
   selectArea({
     ...suggestion.relation,
-    reason: "Accepted AI suggestion.",
+    reason: "Accepted suggestion.",
     state: "preselected"
   });
   setStatus(`${suggestion.name} selected.`);
@@ -590,7 +605,7 @@ async function createSuggestedArea(suggestion) {
       entityId: area.id,
       entityName: area.name,
       confidence: 100,
-      reason: "Created from AI Area suggestion.",
+      reason: "Created from suggestion.",
       state: "preselected"
     });
     state.classification.suggestedAreas = [];
@@ -911,8 +926,8 @@ function addCreatedTopic(topic) {
     entityName: topic.name,
     confidence: 100,
     reason: topic.areaName
-      ? `Created from AI suggestion under ${topic.areaName}.`
-      : "Created from AI suggestion.",
+      ? `Created from suggestion under ${topic.areaName}.`
+      : "Created from suggestion.",
     state: "preselected"
   };
 
@@ -931,7 +946,7 @@ async function postJson(path, body, method = "POST") {
       body: method === "GET" ? undefined : JSON.stringify(body)
     });
   } catch {
-    throw new Error("Local server is offline. Run npm run server, then reload the extension.");
+    throw new Error("The helper app is offline. Run npm run server, then reload the extension.");
   }
 
   const payload = await response.json().catch(() => undefined);
@@ -986,7 +1001,7 @@ function hostFromUrl(url) {
 }
 
 function setBusy(isBusy) {
-  elements.classifyButton.disabled = isBusy;
+  elements.classifyButton.disabled = isBusy || isUnsupportedCapturePage(elements.resourceUrl.value);
   elements.enhanceButton.disabled = isBusy || !state.classification;
   elements.saveButton.disabled = isBusy || !state.classification;
   const currentSuggestion = state.classification ? areaSuggestion(state.classification) : undefined;
@@ -1014,5 +1029,27 @@ function resourceTypeLabel(type) {
       return "Article";
     default:
       return "Webpage";
+  }
+}
+
+function updatePageReadiness() {
+  if (isUnsupportedCapturePage(state.page?.url)) {
+    elements.classifyButton.disabled = true;
+    elements.enhanceButton.disabled = true;
+    elements.saveButton.disabled = true;
+    setStatus("Open the page you want to save. This is your Notion workspace.", true);
+    return;
+  }
+
+  elements.classifyButton.disabled = false;
+  setStatus("Ready to suggest where this should go.");
+}
+
+function isUnsupportedCapturePage(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "app.notion.com";
+  } catch {
+    return false;
   }
 }

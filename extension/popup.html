@@ -13,7 +13,7 @@
           <h1>Second Brain</h1>
           <p id="pageHost">Ready</p>
         </div>
-        <span id="serverState" class="pill">Local</span>
+        <span id="serverState" class="pill">Checking</span>
       </header>
 
       <section class="resource">
@@ -28,17 +28,17 @@
       </section>
 
       <section class="actions">
-        <button id="classifyButton" type="button">Classify</button>
-        <button id="enhanceButton" type="button" disabled>AI Enhance</button>
+        <button id="classifyButton" type="button">Suggest</button>
+        <button id="enhanceButton" type="button" disabled>Improve</button>
         <button id="saveButton" type="button" disabled>Save</button>
       </section>
 
-      <p id="status" class="status">Open a page, then classify it.</p>
+      <p id="status" class="status">Open something worth saving, then get suggestions.</p>
 
       <section id="summarySection" class="summary" hidden>
         <div class="sectionHeader">
           <h2>Summary</h2>
-          <span id="engineBadge" class="miniPill">Local</span>
+          <span id="engineBadge" class="miniPill" hidden></span>
         </div>
         <p id="summary"></p>
       </section>

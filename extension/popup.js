@@ -8,6 +8,9 @@ const state = {
   areaSkipped: false
 };
 
+const createNewAreaValue = "__create_new_area__";
+const createNewTopicValue = "__create_new_topic__";
+
 const elements = {
   pageHost: document.querySelector("#pageHost"),
   serverState: document.querySelector("#serverState"),
@@ -44,6 +47,9 @@ const elements = {
   topicsList: document.querySelector("#topicsList"),
   topicPicker: document.querySelector("#topicPicker"),
   addTopicButton: document.querySelector("#addTopicButton"),
+  newTopicGroup: document.querySelector("#newTopicGroup"),
+  newTopicName: document.querySelector("#newTopicName"),
+  createTopicButton: document.querySelector("#createTopicButton"),
   newTopicsGroup: document.querySelector("#newTopicsGroup"),
   newTopicsList: document.querySelector("#newTopicsList"),
   projectsList: document.querySelector("#projectsList"),
@@ -63,6 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   elements.addAreaButton.addEventListener("click", choosePickedArea);
   elements.createAreaButton.addEventListener("click", createNewArea);
   elements.addTopicButton.addEventListener("click", () => addPickedRelation("topics"));
+  elements.createTopicButton.addEventListener("click", createNewTopic);
   elements.addProjectButton.addEventListener("click", () => addPickedRelation("projects"));
   checkServer();
   loadTaxonomyPickers();
@@ -122,8 +129,8 @@ async function loadTaxonomyPickers() {
   try {
     const response = await postJson("/api/taxonomy", undefined, "GET");
     state.taxonomy = response.taxonomy;
-    renderPicker(elements.areaPicker, state.taxonomy.areas, "Choose Area");
-    renderPicker(elements.topicPicker, state.taxonomy.topics, "Choose Topic");
+    renderPicker(elements.areaPicker, state.taxonomy.areas, "Choose Area", "+ New Area...", createNewAreaValue);
+    renderPicker(elements.topicPicker, state.taxonomy.topics, "Choose Topic", "+ New Topic...", createNewTopicValue);
     renderPicker(
       elements.projectPicker,
       state.taxonomy.projects.filter((project) => (project.status ?? "active") === "active"),
@@ -144,13 +151,14 @@ function setPickerLoading(isLoading) {
     elements.projectPicker,
     elements.addAreaButton,
     elements.addTopicButton,
+    elements.createTopicButton,
     elements.addProjectButton
   ]) {
     element.disabled = isLoading;
   }
 }
 
-function renderPicker(select, items, placeholder) {
+function renderPicker(select, items, placeholder, createLabel, createValue) {
   select.replaceChildren();
 
   const option = document.createElement("option");
@@ -163,6 +171,13 @@ function renderPicker(select, items, placeholder) {
     itemOption.value = item.id;
     itemOption.textContent = item.name;
     select.append(itemOption);
+  }
+
+  if (createLabel && createValue) {
+    const createOption = document.createElement("option");
+    createOption.value = createValue;
+    createOption.textContent = createLabel;
+    select.append(createOption);
   }
 }
 
@@ -321,15 +336,34 @@ function renderClassification(classification) {
   elements.relationsSection.hidden = false;
 
   renderAreaFlow(classification);
+  autoSelectPrimaryRelation(classification.topics);
   renderRelations(elements.topicsList, "topics", classification.topics);
   renderSuggestedTopics(classification.suggestedTopics ?? []);
   renderRelations(elements.projectsList, "projects", classification.projects);
+}
+
+function autoSelectPrimaryRelation(relations) {
+  if (relations.length === 0 || relations.some((relation) => relation.state === "preselected")) {
+    return;
+  }
+
+  relations.sort(
+    (a, b) => b.confidence - a.confidence || a.entityName.localeCompare(b.entityName)
+  )[0].state = "preselected";
 }
 
 function renderAreaFlow(classification) {
   const suggestion = areaSuggestion(classification);
   elements.areaSuggestionPanel.hidden = !suggestion;
   elements.acceptAreaSuggestionButton.disabled = !suggestion;
+
+  if (!state.areaSelection && !state.areaSkipped && suggestion?.kind === "existing") {
+    state.areaSelection = {
+      ...suggestion.relation,
+      reason: "Auto-selected suggestion.",
+      state: "preselected"
+    };
+  }
 
   if (suggestion) {
     elements.areaSuggestionEyebrow.textContent =
@@ -478,6 +512,11 @@ async function choosePickedArea() {
     return;
   }
 
+  if (elements.areaPicker.value === createNewAreaValue) {
+    showNewAreaForm();
+    return;
+  }
+
   const area = state.taxonomy.areas.find((item) => item.id === elements.areaPicker.value);
   if (!area) {
     setStatus("That Area is not available anymore. Reload the extension and try again.", true);
@@ -569,7 +608,7 @@ function addAreaToTaxonomy(area) {
 
   if (!state.taxonomy.areas.some((item) => item.id === area.id)) {
     state.taxonomy.areas = [...state.taxonomy.areas, area];
-    renderPicker(elements.areaPicker, state.taxonomy.areas, "Choose Area");
+    renderPicker(elements.areaPicker, state.taxonomy.areas, "Choose Area", "+ New Area...", createNewAreaValue);
   }
 }
 
@@ -606,6 +645,11 @@ async function addPickedRelation(kind) {
     return;
   }
 
+  if (kind === "topics" && select.value === createNewTopicValue) {
+    showNewTopicForm();
+    return;
+  }
+
   const collectionByKind = {
     areas: state.taxonomy.areas,
     topics: state.taxonomy.topics,
@@ -629,6 +673,53 @@ async function addPickedRelation(kind) {
   renderRelations(listElementForKind(kind), kind, state.classification[kind]);
   select.value = "";
   setStatus(`${entity.name} selected.`);
+}
+
+function showNewTopicForm() {
+  elements.newTopicGroup.hidden = false;
+  elements.newTopicName.focus();
+}
+
+async function createNewTopic() {
+  ensureClassification();
+  const name = elements.newTopicName.value.trim();
+  if (!name) {
+    setStatus("Enter a name for the new Topic.", true);
+    return;
+  }
+
+  elements.createTopicButton.disabled = true;
+  elements.createTopicButton.textContent = "Creating...";
+  setStatus(`Creating Topic: ${name}`);
+
+  try {
+    const response = await postJson("/api/topics", { name });
+    addTopicToTaxonomy(response.topic);
+    addCreatedTopic(response.topic);
+    elements.newTopicName.value = "";
+    elements.newTopicGroup.hidden = true;
+    setStatus(`${response.topic.name} created and selected.`);
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    elements.createTopicButton.disabled = false;
+    elements.createTopicButton.textContent = "Create";
+  }
+}
+
+function addTopicToTaxonomy(topic) {
+  if (!state.taxonomy) {
+    state.taxonomy = {
+      areas: [],
+      topics: [],
+      projects: []
+    };
+  }
+
+  if (!state.taxonomy.topics.some((item) => item.id === topic.id)) {
+    state.taxonomy.topics = [...state.taxonomy.topics, topic];
+    renderPicker(elements.topicPicker, state.taxonomy.topics, "Choose Topic", "+ New Topic...", createNewTopicValue);
+  }
 }
 
 function relationKindLabel(kind) {
@@ -784,6 +875,7 @@ async function createSuggestedTopic(suggestion, button, inlineStatus) {
     });
 
     addCreatedTopic(response.topic);
+    addTopicToTaxonomy(response.topic);
     button.textContent = "Created";
     inlineStatus.textContent = "Created and selected.";
     inlineStatus.dataset.state = "success";
@@ -799,7 +891,7 @@ async function createSuggestedTopic(suggestion, button, inlineStatus) {
 
 function addCreatedTopic(topic) {
   if (!state.classification) {
-    state.classification = emptyClassification();
+    ensureClassification();
   }
 
   const existingTopics = state.classification?.topics ?? [];
@@ -895,6 +987,8 @@ function setBusy(isBusy) {
   elements.skipAreaButton.disabled = isBusy;
   elements.addAreaButton.disabled = isBusy;
   elements.createAreaButton.disabled = isBusy;
+  elements.addTopicButton.disabled = isBusy;
+  elements.createTopicButton.disabled = isBusy;
 }
 
 function setStatus(message, isError = false) {

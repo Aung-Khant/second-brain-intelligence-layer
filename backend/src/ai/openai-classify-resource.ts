@@ -91,6 +91,7 @@ async function classifyWithOpenAiResponses(
     },
     body: JSON.stringify({
       model: config.model,
+      max_output_tokens: 800,
       input: buildPrompt(resource, taxonomy),
       text: {
         format: {
@@ -146,7 +147,7 @@ async function classifyWithOpenRouter(
       provider: {
         require_parameters: true
       },
-      max_tokens: 1200,
+      max_tokens: 800,
       temperature: 0.1
     })
   });
@@ -191,7 +192,7 @@ function toPromptResource(resource: TrustedResourceInput): TrustedResourceInput 
   return {
     ...resource,
     description: stripGenericDescription(resource.description),
-    visibleText: resource.visibleText?.slice(0, 4000)
+    visibleText: resource.visibleText?.slice(0, 1500)
   };
 }
 
@@ -209,12 +210,12 @@ function toPromptTaxonomy(taxonomy: Taxonomy): Record<string, unknown> {
     areas: taxonomy.areas.map((area) => ({
       id: area.id,
       name: area.name,
-      definition: area.definition
+      definition: truncateForPrompt(area.definition, 280)
     })),
     topics: taxonomy.topics.map((topic) => ({
       id: topic.id,
       name: topic.name,
-      definition: topic.definition,
+      definition: truncateForPrompt(topic.definition, 280),
       areas: topic.areas
     })),
     projects: taxonomy.projects
@@ -222,11 +223,16 @@ function toPromptTaxonomy(taxonomy: Taxonomy): Record<string, unknown> {
       .map((project) => ({
         id: project.id,
         name: project.name,
-        goal: project.goal,
+        goal: truncateForPrompt(project.goal, 280),
         areas: project.areas,
         topics: project.topics
       }))
   };
+}
+
+function truncateForPrompt(value: string | undefined, maxLength: number): string | undefined {
+  if (!value || value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength).trim()}...`;
 }
 
 function parseResponsesOutputText(payload: ResponsesApiOutput): OpenAiClassification {

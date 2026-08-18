@@ -71,11 +71,21 @@ export function understandResource(resource: TrustedResourceInput): ResourceUnde
 
 function summarize(resource: TrustedResourceInput): string {
   const creator = resource.creator ? ` by ${resource.creator}` : "";
-  const description = resource.description?.trim();
+  const title = cleanTitle(resource.title, resource.type);
+  const description = stripGenericDescription(resource.description, resource.type);
   if (description) {
-    return `${resource.title}${creator}: ${description}`;
+    return `${title}${creator}: ${description}`;
   }
-  return `${resource.title}${creator}`;
+
+  if (resource.type === "youtube_video") {
+    return `YouTube video: ${title}${creator}.`;
+  }
+
+  if (resource.type === "youtube_channel") {
+    return `YouTube channel: ${title}${creator}.`;
+  }
+
+  return `${title}${creator}`;
 }
 
 function resourceText(resource: TrustedResourceInput): string {
@@ -83,15 +93,40 @@ function resourceText(resource: TrustedResourceInput): string {
     resource.type !== "youtube_video" && resource.type !== "youtube_channel";
 
   return [
-    resource.title,
+    cleanTitle(resource.title, resource.type),
     resource.creator,
-    resource.description,
+    stripGenericDescription(resource.description, resource.type),
     shouldUseVisibleText
       ? resource.visibleText?.slice(0, classifierConfig.maxVisibleTextCharacters)
       : undefined
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+function cleanTitle(title: string, type: TrustedResourceInput["type"]): string {
+  if (type !== "youtube_video" && type !== "youtube_channel") return title.trim();
+
+  return title
+    .trim()
+    .replace(/^\(\d+\)\s*/, "")
+    .replace(/\s+-\s+YouTube$/i, "")
+    .trim();
+}
+
+function stripGenericDescription(
+  value: string | undefined,
+  type: TrustedResourceInput["type"]
+): string | undefined {
+  if (!value) return undefined;
+
+  const description = value.trim();
+  if (type !== "youtube_video" && type !== "youtube_channel") return description;
+
+  const genericYoutubeDescription =
+    "Enjoy the videos and music you love, upload original content, and share it all with friends, family, and the world on YouTube.";
+
+  return description === genericYoutubeDescription ? undefined : description;
 }
 
 function extractConcepts(normalized: string): string[] {

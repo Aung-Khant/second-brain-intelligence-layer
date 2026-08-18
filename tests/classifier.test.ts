@@ -88,6 +88,20 @@ test("ignores noisy YouTube page text for relation matching", () => {
   assert.deepEqual(output.topics, []);
 });
 
+test("strips generic YouTube boilerplate from local summaries", () => {
+  const output = classifyResource({
+    resource: {
+      type: "youtube_video",
+      title: "(85) I'm a Doctor with ADHD: How I Really Focus - YouTube",
+      description:
+        "Enjoy the videos and music you love, upload original content, and share it all with friends, family, and the world on YouTube."
+    },
+    taxonomy: mockTaxonomy
+  });
+
+  assert.equal(output.summary, "YouTube video: I'm a Doctor with ADHD: How I Really Focus.");
+});
+
 test("uses article page text for relation matching", () => {
   const output = classifyResource({
     resource: {

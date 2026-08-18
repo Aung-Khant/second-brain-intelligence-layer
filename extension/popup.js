@@ -288,14 +288,6 @@ function renderClassification(classification) {
   elements.summarySection.hidden = false;
   elements.relationsSection.hidden = false;
 
-  if (classification.suggestedSaveIntent) {
-    elements.saveIntent.value = classification.suggestedSaveIntent;
-  }
-
-  if (classification.suggestedWhySaved) {
-    elements.whySaved.value = classification.suggestedWhySaved;
-  }
-
   renderRelations(elements.areasList, "areas", classification.areas);
   renderRelations(elements.topicsList, "topics", classification.topics);
   renderSuggestedTopics(classification.suggestedTopics ?? []);

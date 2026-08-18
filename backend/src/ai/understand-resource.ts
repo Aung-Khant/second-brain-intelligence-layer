@@ -79,11 +79,16 @@ function summarize(resource: TrustedResourceInput): string {
 }
 
 function resourceText(resource: TrustedResourceInput): string {
+  const shouldUseVisibleText =
+    resource.type !== "youtube_video" && resource.type !== "youtube_channel";
+
   return [
     resource.title,
     resource.creator,
     resource.description,
-    resource.visibleText?.slice(0, classifierConfig.maxVisibleTextCharacters)
+    shouldUseVisibleText
+      ? resource.visibleText?.slice(0, classifierConfig.maxVisibleTextCharacters)
+      : undefined
   ]
     .filter(Boolean)
     .join(" ");

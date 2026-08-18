@@ -25,18 +25,7 @@ export function classifyRelations(
   understanding: ResourceUnderstanding,
   taxonomy: Taxonomy
 ): ClassifiedResource {
-  const resourceBag = normalizeText(
-    [
-      resource.title,
-      resource.creator,
-      resource.description,
-      resource.visibleText,
-      understanding.summary,
-      understanding.concepts.join(" "),
-      understanding.keywords.join(" "),
-      understanding.subjectMatter.join(" ")
-    ].join(" ")
-  );
+  const resourceBag = buildRelationText(resource, understanding);
 
   return {
     ...understanding,
@@ -54,6 +43,27 @@ export function classifyRelations(
       .filter(isVisible)
       .sort(sortRelations)
   };
+}
+
+function buildRelationText(
+  resource: TrustedResourceInput,
+  understanding: ResourceUnderstanding
+): string {
+  const shouldUseVisibleText =
+    resource.type !== "youtube_video" && resource.type !== "youtube_channel";
+
+  return normalizeText(
+    [
+      resource.title,
+      resource.creator,
+      resource.description,
+      shouldUseVisibleText ? resource.visibleText : "",
+      understanding.summary,
+      understanding.concepts.join(" "),
+      understanding.keywords.join(" "),
+      understanding.subjectMatter.join(" ")
+    ].join(" ")
+  );
 }
 
 function scoreArea(area: Area, resourceBag: string): RelationSuggestion {
@@ -190,7 +200,11 @@ function significantTokens(text: string): string[] {
     "from",
     "goal",
     "how",
+    "market",
     "old",
+    "product",
+    "system",
+    "systems",
     "the",
     "that",
     "this",

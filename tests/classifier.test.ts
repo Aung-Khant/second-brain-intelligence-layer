@@ -72,6 +72,38 @@ test("does not force a topic when no existing topic fits", () => {
   assert.deepEqual(output.topics, []);
 });
 
+test("ignores noisy YouTube page text for relation matching", () => {
+  const output = classifyResource({
+    resource: {
+      type: "youtube_video",
+      title: "WAIT E-Ink was FAST this WHOLE Time?!",
+      description: "",
+      visibleText:
+        "recommended videos about business products, market systems, learning strategies, memory, brain science, and unrelated AI tools."
+    },
+    taxonomy: mockTaxonomy
+  });
+
+  assert.deepEqual(output.areas, []);
+  assert.deepEqual(output.topics, []);
+});
+
+test("uses article page text for relation matching", () => {
+  const output = classifyResource({
+    resource: {
+      type: "article",
+      title: "Field Notes",
+      description: "",
+      visibleText:
+        "A practical guide to memory, attention, retrieval practice, and learning for stronger recall."
+    },
+    taxonomy: mockTaxonomy
+  });
+
+  assert.ok(output.areas.some((area) => area.entityName === "Cognitive Science"));
+  assert.ok(output.topics.some((topic) => topic.entityName === "Memory"));
+});
+
 test("does not suggest unrelated projects", () => {
   const output = classifyResource({
     resource: {
@@ -162,4 +194,3 @@ test("rejects missing metadata", () => {
     /Resource title is required/
   );
 });
-

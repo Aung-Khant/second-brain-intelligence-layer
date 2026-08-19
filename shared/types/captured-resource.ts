@@ -9,7 +9,16 @@
 // Confidence here is 0-1, unlike the legacy pipeline's 0-100. See
 // selectionStateFor for the thresholds that turn a confidence into UI state.
 
-export type SourceType = "youtube_video" | "youtube_channel";
+// The full set the pipeline is being built toward. A type listed here is only
+// actually capturable once it has an adapter in shared/capture/source.ts -
+// the registry, not this union, decides what the extension accepts.
+export type SourceType =
+  | "youtube_video"
+  | "youtube_channel"
+  | "github_repo"
+  | "article"
+  | "website"
+  | "research_paper";
 
 export type CapturedResource = {
   url: string;

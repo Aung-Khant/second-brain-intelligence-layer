@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Second Brain Capture",
-  "version": "0.1.0",
-  "description": "Classify the current page and save confirmed resources into Notion.",
+  "version": "0.2.0",
+  "description": "Save YouTube videos into your Notion Second Brain with suggested Areas, Projects, and Topics.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Second Brain Capture"
+    "default_title": "Save to Brain"
   },
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["http://127.0.0.1:3737/*", "http://localhost:3737/*"]

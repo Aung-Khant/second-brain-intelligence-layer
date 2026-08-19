@@ -14,7 +14,8 @@ import {
   assertSourceIdentity,
   canonicalUrlFor,
   detectSource,
-  isSupportedSourceType
+  isSupportedSourceType,
+  sourceTypeIsAccepted
 } from "../capture/source.js";
 
 export function assertCapturedResource(value: unknown): asserts value is CapturedResource {
@@ -23,10 +24,7 @@ export function assertCapturedResource(value: unknown): asserts value is Capture
   }
 
   if (!isSupportedSourceType(value.sourceType)) {
-    throw new AppError(
-      "UNSUPPORTED_RESOURCE",
-      "Only YouTube videos and channels are supported right now."
-    );
+    throw new AppError("UNSUPPORTED_RESOURCE", "That kind of resource is not supported.");
   }
 
   const url = requireString(value.url, "url");
@@ -35,13 +33,15 @@ export function assertCapturedResource(value: unknown): asserts value is Capture
   if (!detected) {
     throw new AppError(
       "UNSUPPORTED_RESOURCE",
-      "This page is not a YouTube video or channel URL."
+      "This page can't be saved. Open a normal web page and try again."
     );
   }
 
   // The client claimed one kind of resource and the URL says another, which
-  // means the capture raced a navigation.
-  if (detected.sourceType !== value.sourceType) {
+  // means the capture raced a navigation. Generic pages are the exception:
+  // article and website share a URL shape and are told apart by page signals,
+  // so the adapter decides which claims it will accept.
+  if (!sourceTypeIsAccepted(value.sourceType, detected)) {
     throw new AppError(
       "PAGE_IDENTITY_MISMATCH",
       "The captured data does not match the page URL. Reload and try again."
@@ -80,12 +80,13 @@ export function normalizeCapturedResource(resource: CapturedResource): CapturedR
   };
 }
 
-// Tab-title cleanup is currently YouTube-shaped. Other sources will want their
-// own site-suffix stripping, at which point this moves behind the adapter -
-// but inventing that indirection before a second case exists would be guessing
-// at what it needs.
+// Only YouTube titles carry the unread-badge and " - YouTube" noise, but
+// collapsing whitespace and trimming is right for every source: page <title>
+// values routinely contain newlines and runs of spaces.
 function cleanTitle(value: unknown): string | null {
-  return cleanYouTubeTitle(typeof value === "string" ? value : null);
+  const raw = typeof value === "string" ? value : null;
+  const cleaned = cleanYouTubeTitle(raw)?.replace(/\s+/g, " ").trim();
+  return cleaned || null;
 }
 
 function emptyToNull(value: string | null): string | null {

@@ -39,10 +39,24 @@ export type ClassificationCandidate = {
   reason: string;
 };
 
+// A category the AI thinks is missing from the taxonomy. It carries a name
+// rather than an id because it does not exist yet, and it is never selected -
+// only a person can turn one of these into a real Notion page.
+export type EntityProposal = {
+  name: string;
+  reason: string;
+};
+
+export type TaxonomyProposals = {
+  areas: EntityProposal[];
+  topics: EntityProposal[];
+};
+
 export type ClassificationResult = {
   areas: ClassificationCandidate[];
   projects: ClassificationCandidate[];
   topics: ClassificationCandidate[];
+  proposals?: TaxonomyProposals;
 };
 
 export type EntityType = "area" | "project" | "topic";

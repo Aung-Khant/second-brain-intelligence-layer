@@ -9,6 +9,7 @@ import type {
   CapturedResource,
   ClassificationCandidate,
   ClassificationResult,
+  TaxonomyProposals,
   ResourceUnderstanding,
   SelectionState
 } from "../../../shared/types/captured-resource.js";
@@ -42,6 +43,7 @@ export type ScoredClassification = {
   areas: ScoredCandidate[];
   projects: ScoredCandidate[];
   topics: ScoredCandidate[];
+  proposals: TaxonomyProposals;
 };
 
 export type AnalyzeRequest = {
@@ -151,7 +153,10 @@ function scoreClassification(classification: ClassificationResult): ScoredClassi
   return {
     areas: classification.areas.map(withState),
     projects: classification.projects.map(withState),
-    topics: classification.topics.map(withState)
+    topics: classification.topics.map(withState),
+    // Carried through untouched: proposals have no confidence and no selection
+    // state, because nothing is selected until a person creates it.
+    proposals: classification.proposals ?? { areas: [], topics: [] }
   };
 }
 

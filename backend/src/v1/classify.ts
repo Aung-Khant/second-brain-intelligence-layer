@@ -8,6 +8,7 @@
 import type {
   CapturedResource,
   ClassificationCandidate,
+  EntityProposal,
   ClassificationResult,
   ResourceUnderstanding
 } from "../../../shared/types/captured-resource.js";
@@ -40,21 +41,43 @@ const candidateSchema = {
   required: ["id", "confidence", "reason"]
 } as const;
 
+const proposalSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    name: {
+      type: "string",
+      description:
+        "A short, durable category name in the same style as the existing ones. Title Case, 1-3 words."
+    },
+    reason: {
+      type: "string",
+      description:
+        "One short sentence, under 20 words. Plain text only: no double quotes, no line breaks."
+    }
+  },
+  required: ["name", "reason"]
+} as const;
+
 const classificationSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
     areas: { type: "array", items: candidateSchema },
     projects: { type: "array", items: candidateSchema },
-    topics: { type: "array", items: candidateSchema }
+    topics: { type: "array", items: candidateSchema },
+    newAreas: { type: "array", items: proposalSchema },
+    newTopics: { type: "array", items: proposalSchema }
   },
-  required: ["areas", "projects", "topics"]
+  required: ["areas", "projects", "topics", "newAreas", "newTopics"]
 } as const;
 
 type RawResult = {
   areas?: unknown;
   projects?: unknown;
   topics?: unknown;
+  newAreas?: unknown;
+  newTopics?: unknown;
 };
 
 export async function classifyAgainstTaxonomy(
@@ -81,7 +104,14 @@ export async function classifyAgainstTaxonomy(
   return {
     areas: normalizeCandidates(output.areas, taxonomy.areas),
     projects: normalizeCandidates(output.projects, activeProjects),
-    topics: normalizeCandidates(output.topics, taxonomy.topics)
+    topics: normalizeCandidates(output.topics, taxonomy.topics),
+    proposals: {
+      // One Area at most: Areas are broad and stable, and a workspace that
+      // grows one per video isn't a taxonomy any more. Topics are finer, so a
+      // couple is reasonable.
+      areas: normalizeProposals(output.newAreas, taxonomy.areas, 1),
+      topics: normalizeProposals(output.newTopics, taxonomy.topics, 3)
+    }
   };
 }
 
@@ -122,6 +152,40 @@ function normalizeCandidates(
   );
 }
 
+// Proposals are names, not IDs, so they can't be validated against the
+// taxonomy the way candidates are. Anything that already exists is dropped -
+// suggesting the user create a duplicate of something they have is worse than
+// suggesting nothing.
+function normalizeProposals(
+  raw: unknown,
+  existing: { name: string }[],
+  limit: number
+): EntityProposal[] {
+  const taken = new Set(existing.map((entity) => entity.name.trim().toLowerCase()));
+  const proposals: EntityProposal[] = [];
+
+  for (const item of Array.isArray(raw) ? raw : []) {
+    if (typeof item !== "object" || item === null) continue;
+
+    const { name, reason } = item as Record<string, unknown>;
+    if (typeof name !== "string") continue;
+
+    const cleaned = name.trim().replace(/\s+/g, " ").slice(0, 80);
+    const key = cleaned.toLowerCase();
+    if (!cleaned || taken.has(key)) continue;
+
+    taken.add(key);
+    proposals.push({
+      name: cleaned,
+      reason: toCleanString(reason, "Suggested as a new category.")
+    });
+
+    if (proposals.length >= limit) break;
+  }
+
+  return proposals;
+}
+
 function buildPrompt(
   resource: CapturedResource,
   understanding: ResourceUnderstanding,
@@ -134,8 +198,9 @@ function buildPrompt(
     "You file a resource into an existing personal Second Brain.",
     "",
     "RULES",
-    "- Choose only from the existing Areas, Projects, and Topics listed below.",
-    "- Copy IDs exactly. Never invent an ID, a name, or a new category.",
+    "- areas, projects, and topics may contain ONLY entities from the lists below.",
+    "- Copy IDs exactly. Never invent an ID. Anything you want to suggest that does not",
+    "  already exist belongs in newAreas or newTopics instead, described further down.",
     "- If nothing genuinely fits a group, return an empty array for it. An empty array is a correct, expected answer.",
     "- Do not force a match. A wrong classification is worse than no classification.",
     "- Areas are broad and stable; usually 1, occasionally 2.",
@@ -151,6 +216,23 @@ function buildPrompt(
     "- A video on vector databases is NOT about 'Web Development' just because vector databases get used in web apps.",
     "- A video on vector databases IS about 'Retrieval' and 'Embeddings' - those are its actual subject.",
     "If your reason would be 'both relate to X broadly', omit the candidate entirely.",
+    "",
+    "PROPOSING NEW CATEGORIES (newAreas, newTopics)",
+    "The lists above are the user's whole taxonomy, and it is still small. When this",
+    "resource genuinely belongs to something they haven't created yet, propose it.",
+    "- Propose only what is missing. If an existing entity already fits, use it and propose nothing.",
+    "- At most 1 Area and at most 3 Topics. Usually fewer. Often none at all.",
+    "- Propose a category, not a label for this one resource. It must be somewhere",
+    "  dozens of future resources could sit. 'Mathematics' yes; 'Taylor Series for ln(x)' no.",
+    "- Match the style of what exists: short, Title Case, one to three words.",
+    "- An Area is a broad, lasting part of the user's life or work. Propose one when the",
+    "  resource's actual subject has no home yet. Note that a catch-all Area (something",
+    "  like 'Learning', 'General', or 'Misc') is not a home for a specific field: a",
+    "  mathematics video filed only under 'Learning' still has no Area for mathematics.",
+    "  In that case select the catch-all AND propose the specific Area alongside it.",
+    "- Never propose a near-duplicate of something listed above under a different name.",
+    "- Do not propose new Projects. A project is something the user decides to start, not",
+    "  something inferred from a video.",
     "",
     "CONFIDENCE (decimal 0 to 1, never a percentage)",
     "- 0.90 and above: the resource is unmistakably, centrally about this entity. Auto-selected for the user.",

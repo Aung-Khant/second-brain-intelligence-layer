@@ -290,6 +290,36 @@ body {
   white-space: nowrap;
 }
 
+/* A proposal sits in the list where a checkbox row would be, indented to the
+   same text column so the names line up with the real entities above it. */
+.row--proposal {
+  padding: 0;
+  margin: 0;
+}
+
+.row--proposal:hover {
+  background: none;
+}
+
+.create--inline {
+  margin-top: 0;
+  padding: 4px 6px;
+  background: none;
+  color: var(--create);
+}
+
+.create--inline:hover {
+  background: var(--create-soft);
+}
+
+.create__tag {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
 .why {
   padding-top: 10px;
   border-top: 1px solid var(--border);

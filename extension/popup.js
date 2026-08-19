@@ -358,6 +358,12 @@ function renderGroup(kind) {
     rows.push(buildRow(kind, candidate, false));
   }
 
+  // Proposed categories that don't exist yet. Never a checkbox: there is
+  // nothing to select until the user creates it in Notion.
+  for (const proposal of proposalsFor(kind)) {
+    rows.push(buildProposalRow(kind, proposal));
+  }
+
   if (rows.length === 0) {
     const empty = document.createElement("li");
     empty.className = "row row--empty";
@@ -366,6 +372,44 @@ function renderGroup(kind) {
   }
 
   list.replaceChildren(...rows);
+}
+
+function proposalsFor(kind) {
+  const proposals = state.classification?.proposals;
+  if (!proposals) return [];
+
+  const pool = kind === "areas" ? proposals.areas : kind === "topics" ? proposals.topics : [];
+  // Drop anything that now exists - the user may have just created it, or an
+  // earlier proposal may have been accepted this session.
+  return (pool ?? []).filter((proposal) => !findExisting(kind, proposal.name));
+}
+
+function buildProposalRow(kind, proposal) {
+  const row = document.createElement("li");
+  row.className = "row row--proposal";
+  if (proposal.reason) row.title = proposal.reason;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "create create--inline";
+  button.replaceChildren(
+    Object.assign(document.createElement("span"), {
+      className: "create__plus",
+      textContent: "+"
+    }),
+    Object.assign(document.createElement("span"), {
+      className: "create__name",
+      textContent: proposal.name
+    }),
+    Object.assign(document.createElement("span"), {
+      className: "create__tag",
+      textContent: "new"
+    })
+  );
+  button.onclick = () => createEntity(kind, proposal.name, button);
+
+  row.append(button);
+  return row;
 }
 
 function buildRow(kind, candidate, isSelected) {
@@ -492,6 +536,8 @@ async function createEntity(kind, name, button) {
     state.taxonomy[kind] = [...(state.taxonomy[kind] ?? []), { id: created.id, name: created.name }];
     state.selected[kind].set(created.id, created.name);
 
+    // Once created it exists, so proposalsFor() will filter it out and the row
+    // re-renders as a normal selected entity.
     hideAdder(kind);
     renderOptions();
     renderGroup(kind);

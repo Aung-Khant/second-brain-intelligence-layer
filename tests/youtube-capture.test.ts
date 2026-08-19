@@ -54,10 +54,13 @@ test("accepts a well-formed captured resource", () => {
   assert.doesNotThrow(() => assertCapturedResource(validResource()));
 });
 
-test("rejects a non-YouTube URL as unsupported", () => {
+// A non-YouTube URL is now captured by the webpage adapter, so this is no
+// longer "unsupported" - but claiming it is a YouTube video still has to fail,
+// because the URL says otherwise.
+test("rejects a non-YouTube URL claimed as a YouTube video", () => {
   assert.throws(
     () => assertCapturedResource(validResource({ url: "https://example.com/article" })),
-    (error: AppError) => error.code === "UNSUPPORTED_RESOURCE"
+    (error: AppError) => error.code === "PAGE_IDENTITY_MISMATCH"
   );
 });
 

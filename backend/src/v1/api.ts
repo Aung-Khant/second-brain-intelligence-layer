@@ -21,6 +21,7 @@ import {
 import { AppError } from "../../../shared/types/errors.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
 import { classifyAgainstTaxonomy } from "./classify.js";
+import { enrichGitHubRepo } from "./enrich-github.js";
 import {
   appendCorrectionRecords,
   buildCorrectionRecords,
@@ -78,7 +79,9 @@ export function selectionStateFor(confidence: number): SelectionState {
 
 export async function analyzeResource(input: AnalyzeRequest): Promise<AnalyzeResponse> {
   assertCapturedResource(input?.resource);
-  const resource = normalizeCapturedResource(input.resource);
+  // Enrichment runs before pass 1 because it improves what pass 1 reads. It is
+  // a no-op for every source that carries its own metadata.
+  const resource = await enrichGitHubRepo(normalizeCapturedResource(input.resource));
 
   // The taxonomy read and pass 1 don't depend on each other, so they overlap.
   // Only pass 2 needs both. On a cold Notion cache this removes a full

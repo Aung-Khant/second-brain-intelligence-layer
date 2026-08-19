@@ -1,9 +1,14 @@
-// Popup for the YouTube-only MVP. It extracts deterministic facts, asks the
-// backend to analyze them, and lets the user correct the result before saving.
+// The capture popup. It extracts deterministic facts from the current page,
+// asks the backend to analyze them, and lets the user correct the result
+// before saving.
 //
-// It never creates new taxonomy - every Area, Project, and Topic offered here
-// already exists in Notion. Notion credentials stay in the backend; this file
-// only ever talks to the local API.
+// Which extractor runs is decided by detectSource, mirroring the registry in
+// shared/capture/source.ts. Supported: YouTube videos and channels, GitHub
+// repositories, research papers, articles, and general web pages.
+//
+// It never creates taxonomy on its own - the AI may propose new Areas and
+// Topics, but only a human click creates one. Notion credentials stay in the
+// backend; this file only ever talks to the local API.
 //
 // Analysis starts automatically on open, so the common path is: open, glance,
 // save. Selection state (auto_selected / suggested) is computed by the backend
@@ -84,7 +89,7 @@ async function capture() {
 
     const target = detectSource(tab.url ?? "");
     if (!target) {
-      showStatus("Open a YouTube video or channel to save it.", true);
+      showStatus("This page can't be saved. Open a normal web page and try again.", true);
       return false;
     }
 
@@ -232,12 +237,187 @@ function cleanYouTubeTitle(title) {
   return cleaned || null;
 }
 
+// Runs in the page. Must be self-contained - no closure over popup scope.
+//
+// The DOM is only a fallback here: the backend re-fetches this repo from the
+// GitHub API, which gives a description, topics, and language as real fields.
+// This exists so a capture still works when the API is rate-limited.
+function extractGitHubRepo() {
+  const meta = (selector, attribute = "content") =>
+    document.querySelector(selector)?.getAttribute(attribute) || null;
+
+  const segments = location.pathname.split("/").filter(Boolean);
+  const fullName = segments.slice(0, 2).join("/").replace(/\.git$/, "");
+
+  const about =
+    document.querySelector('[data-testid="repo-description"], .f4.my-3')?.textContent?.trim() ||
+    meta('meta[property="og:description"]') ||
+    null;
+
+  const topics = [...document.querySelectorAll('a[data-ga-click*="topic"], .topic-tag')]
+    .map((node) => node.textContent.trim())
+    .filter(Boolean);
+
+  return {
+    url: location.href,
+    canonicalUrl: null,
+    sourceType: "github_repo",
+    sourceId: fullName,
+    title: fullName,
+    creator: segments[0] || null,
+    creatorId: null,
+    description: [about, topics.length ? `Topics: ${topics.join(", ")}.` : null]
+      .filter(Boolean)
+      .join(" ") || null,
+    pageText: null,
+    publishedAt: null,
+    thumbnailUrl: meta('meta[property="og:image"]')
+  };
+}
+
+// Runs in the page. Must be self-contained - no closure over popup scope.
+//
+// Academic publishers almost universally emit Highwire Press citation_* tags,
+// which makes this the most reliable extraction of any source: the abstract is
+// a better summary input than anything on an ordinary web page.
+function extractResearchPaper() {
+  const meta = (selector, attribute = "content") =>
+    document.querySelector(selector)?.getAttribute(attribute) || null;
+
+  const all = (name) =>
+    [...document.querySelectorAll(`meta[name="${name}"]`)]
+      .map((node) => node.getAttribute("content"))
+      .filter(Boolean);
+
+  const authors = all("citation_author");
+  const arxiv = location.pathname.match(/\/(?:abs|pdf)\/([\w.\/-]+?)(?:v\d+)?(?:\.pdf)?$/);
+
+  const abstract =
+    meta('meta[name="citation_abstract"]') ||
+    meta('meta[name="description"]') ||
+    document.querySelector(".abstract, #abstract, blockquote.abstract")?.textContent?.trim() ||
+    null;
+
+  return {
+    url: location.href,
+    canonicalUrl: meta('link[rel="canonical"]', "href"),
+    sourceType: "research_paper",
+    sourceId: arxiv ? `arxiv:${arxiv[1]}` : meta('meta[name="citation_doi"]') || location.href,
+    title: meta('meta[name="citation_title"]') || document.title || null,
+    creator: authors.length ? authors.slice(0, 6).join(", ") : null,
+    creatorId: meta('meta[name="citation_doi"]'),
+    description: abstract,
+    pageText: null,
+    publishedAt: meta('meta[name="citation_publication_date"]') || null,
+    thumbnailUrl: null
+  };
+}
+
+// Runs in the page. Must be self-contained - no closure over popup scope.
+//
+// The riskiest extractor by far: everything downstream rests on this returning
+// real prose rather than navigation chrome. A page that extracts as a menu
+// produces a confident, useless summary, and the confidence bands will not
+// catch it, because the model is not uncertain there - only wrong.
+//
+// Deliberately a heuristic rather than a full readability implementation. It
+// is behind the same interface, so it can be replaced without touching
+// anything else once real use shows which pages it fails on.
+function extractWebPage() {
+  const meta = (selector, attribute = "content") =>
+    document.querySelector(selector)?.getAttribute(attribute) || null;
+
+  const jsonLd = (() => {
+    for (const node of document.querySelectorAll('script[type="application/ld+json"]')) {
+      try {
+        const parsed = JSON.parse(node.textContent);
+        const entries = Array.isArray(parsed) ? parsed : [parsed, ...(parsed["@graph"] ?? [])];
+        for (const entry of entries) {
+          if (entry && typeof entry["@type"] === "string") return entry;
+        }
+      } catch {
+        // A malformed block is common and not worth failing over.
+      }
+    }
+    return null;
+  })();
+
+  const ldType = String(jsonLd?.["@type"] ?? "");
+  const ogType = meta('meta[property="og:type"]') ?? "";
+
+  // Article vs website is a fact about the page, so code decides it, not the
+  // model. Any one of these signals is enough.
+  const isArticle =
+    /article|blogposting|newsarticle|report/i.test(ldType) ||
+    /article/i.test(ogType) ||
+    Boolean(meta('meta[property="article:published_time"]')) ||
+    Boolean(document.querySelector("article"));
+
+  const author =
+    meta('meta[name="author"]') ||
+    meta('meta[property="article:author"]') ||
+    (typeof jsonLd?.author === "object" ? jsonLd.author?.name : jsonLd?.author) ||
+    null;
+
+  // Prefer the semantic container; fall back to whichever block carries the
+  // most paragraph text, which is a decent proxy for "the actual content".
+  const candidates = [
+    document.querySelector("article"),
+    document.querySelector("main"),
+    document.querySelector('[role="main"]'),
+    ...document.querySelectorAll("#content, .post, .entry-content, .article-body")
+  ].filter(Boolean);
+
+  const score = (node) =>
+    [...node.querySelectorAll("p")].reduce((total, p) => total + p.textContent.trim().length, 0);
+
+  let best = candidates.sort((a, b) => score(b) - score(a))[0] ?? document.body;
+  if (score(best) < 200) best = document.body;
+
+  const clone = best.cloneNode(true);
+  for (const node of clone.querySelectorAll(
+    "nav, aside, footer, header, script, style, noscript, form, iframe, button, " +
+      '[role="navigation"], [aria-hidden="true"], .comments, #comments, .sidebar, .related'
+  )) {
+    node.remove();
+  }
+
+  const pageText = clone.textContent.replace(/\s+/g, " ").trim().slice(0, 12000) || null;
+
+  return {
+    url: location.href,
+    canonicalUrl: meta('link[rel="canonical"]', "href"),
+    sourceType: isArticle ? "article" : "website",
+    // A general page has no identifier of its own; its URL is its identity.
+    sourceId: location.origin + location.pathname,
+    title:
+      meta('meta[property="og:title"]') ||
+      document.querySelector("h1")?.textContent?.trim() ||
+      document.title ||
+      null,
+    creator: author || location.hostname.replace(/^www\./, ""),
+    creatorId: null,
+    description:
+      meta('meta[name="description"]') || meta('meta[property="og:description"]') || null,
+    pageText,
+    publishedAt:
+      meta('meta[property="article:published_time"]') ||
+      meta('meta[name="citation_publication_date"]') ||
+      jsonLd?.datePublished ||
+      null,
+    thumbnailUrl: meta('meta[property="og:image"]')
+  };
+}
+
 // Which in-page extractor runs for each source type. Adding a source type
 // means adding a detector below and an entry here - nothing else in this file
 // should need to know the difference.
 const extractors = {
   youtube_video: extractYouTubeVideo,
-  youtube_channel: extractYouTubeChannel
+  youtube_channel: extractYouTubeChannel,
+  github_repo: extractGitHubRepo,
+  research_paper: extractResearchPaper,
+  website: extractWebPage
 };
 
 // Mirrors shared/capture/source.ts. Kept in sync by hand - the extension has
@@ -254,12 +434,63 @@ function detectSource(url) {
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
 
-  for (const detect of [detectYouTubeVideo, detectYouTubeChannel]) {
+  for (const detect of [
+    detectYouTubeVideo,
+    detectYouTubeChannel,
+    detectGitHubRepo,
+    detectResearchPaper,
+    detectWebPage
+  ]) {
     const detected = detect(parsed);
     if (detected) return detected;
   }
 
   return null;
+}
+
+const reservedGitHubPaths = new Set([
+  "features", "pricing", "about", "topics", "collections", "trending",
+  "marketplace", "sponsors", "settings", "notifications", "explore", "orgs",
+  "organizations", "login", "join", "search", "apps", "codespaces", "issues",
+  "pulls", "new"
+]);
+
+function detectGitHubRepo(parsed) {
+  if (parsed.hostname.toLowerCase().replace(/^www\./, "") !== "github.com") return null;
+
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  if (segments.length < 2) return null;
+
+  const [owner, repo] = segments;
+  if (reservedGitHubPaths.has(owner.toLowerCase())) return null;
+  if (!/^[\w.-]+$/.test(owner) || !/^[\w.-]+$/.test(repo)) return null;
+
+  return { sourceType: "github_repo", id: `${owner}/${repo.replace(/\.git$/, "")}` };
+}
+
+const paperHosts = [
+  "arxiv.org", "doi.org", "dx.doi.org", "pubmed.ncbi.nlm.nih.gov",
+  "ncbi.nlm.nih.gov", "biorxiv.org", "medrxiv.org", "dl.acm.org",
+  "ieeexplore.ieee.org", "papers.ssrn.com", "semanticscholar.org",
+  "openreview.net", "sciencedirect.com", "nature.com", "jstor.org"
+];
+
+function detectResearchPaper(parsed) {
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  if (!paperHosts.some((paperHost) => host === paperHost || host.endsWith(`.${paperHost}`))) {
+    return null;
+  }
+
+  const arxiv = parsed.pathname.match(/\/(?:abs|pdf)\/([\w.\/-]+?)(?:v\d+)?(?:\.pdf)?$/);
+  return { sourceType: "research_paper", id: arxiv ? `arxiv:${arxiv[1]}` : null };
+}
+
+function detectWebPage(parsed) {
+  const host = parsed.hostname.toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return null;
+  if (!parsed.hostname.includes(".")) return null;
+
+  return { sourceType: "website", id: null };
 }
 
 function detectYouTubeVideo(parsed) {
@@ -348,11 +579,25 @@ function renderVideo() {
   elements.video.hidden = false;
   elements.videoTitle.textContent = state.resource.title ?? "(untitled)";
 
-  // For a channel the creator IS the title, so repeating it is noise.
-  const isChannel = state.resource.sourceType === "youtube_channel";
-  elements.videoCreator.textContent = isChannel
-    ? "YouTube channel"
-    : (state.resource.creator ?? "");
+  // Name the kind of thing when the creator would otherwise be redundant or
+  // missing: a channel's creator IS its title, and a repo's owner is already
+  // in its full name.
+  const kindLabels = {
+    youtube_channel: "YouTube channel",
+    github_repo: "GitHub repository",
+    research_paper: "Research paper",
+    website: "Web page",
+    article: "Article"
+  };
+
+  const creator = state.resource.creator ?? "";
+  const kind = kindLabels[state.resource.sourceType];
+  elements.videoCreator.textContent =
+    state.resource.sourceType === "youtube_channel" || !creator
+      ? (kind ?? "")
+      : kind && kind !== "Web page" && kind !== "Article"
+        ? `${creator} · ${kind}`
+        : creator;
 
   const summary = state.understanding?.summary;
   elements.videoSummary.hidden = !summary;

@@ -13,6 +13,7 @@
 // empty. See the same warning in notion/save-resource.ts.
 import { AppError } from "../../../shared/types/errors.js";
 import type { SourceType } from "../../../shared/types/captured-resource.js";
+import { notionTypeFor } from "../../../shared/capture/source.js";
 import { NotionClient } from "../notion/client.js";
 import { readNotionTaxonomyConfig } from "../notion/config.js";
 import { findDuplicateResource } from "../notion/save-resource.js";
@@ -29,12 +30,6 @@ export type VideoResourceToSave = {
   topicIds: string[];
 };
 
-// Maps to the options that already exist in the Type select. A value not in
-// this list would be rejected by Notion.
-const notionTypeBySourceType: Record<SourceType, string> = {
-  youtube_video: "Video",
-  youtube_channel: "YouTube Channel"
-};
 
 export type SavedResource = {
   status: "saved" | "duplicate";
@@ -83,7 +78,7 @@ function buildProperties(
   const properties: Record<string, unknown> = {
     Name: { title: [{ text: { content: input.name } }] },
     URL: { url: normalizedUrl },
-    Type: { select: { name: notionTypeBySourceType[input.sourceType] } },
+    Type: { select: { name: notionTypeFor(input.sourceType) } },
     Areas: { relation: input.areaIds.map((id) => ({ id })) },
     Projects: { relation: input.projectIds.map((id) => ({ id })) },
     Topics: { relation: input.topicIds.map((id) => ({ id })) }

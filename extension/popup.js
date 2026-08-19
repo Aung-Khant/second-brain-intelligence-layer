@@ -82,7 +82,7 @@ async function capture() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) throw new Error("No active tab found.");
 
-    const target = parseYouTubeTarget(tab.url ?? "");
+    const target = detectSource(tab.url ?? "");
     if (!target) {
       showStatus("Open a YouTube video or channel to save it.", true);
       return false;
@@ -94,7 +94,7 @@ async function capture() {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       world: "MAIN",
-      func: target.kind === "video" ? extractYouTubeVideo : extractYouTubeChannel
+      func: extractors[target.sourceType]
     });
 
     const extracted = result?.result;
@@ -104,7 +104,7 @@ async function capture() {
     }
 
     if (!extracted?.sourceId) {
-      showStatus(`Could not read this ${target.kind}. Let the page load and reopen.`, true);
+      showStatus("Could not read this page. Let it finish loading and reopen.", true);
       return false;
     }
 
@@ -232,9 +232,19 @@ function cleanYouTubeTitle(title) {
   return cleaned || null;
 }
 
-// Mirrors shared/capture/youtube.ts. Kept in sync by hand - the extension has
-// no build step and cannot import the TypeScript module.
-function parseYouTubeTarget(url) {
+// Which in-page extractor runs for each source type. Adding a source type
+// means adding a detector below and an entry here - nothing else in this file
+// should need to know the difference.
+const extractors = {
+  youtube_video: extractYouTubeVideo,
+  youtube_channel: extractYouTubeChannel
+};
+
+// Mirrors shared/capture/source.ts. Kept in sync by hand - the extension has
+// no build step and cannot import the TypeScript modules. The backend
+// re-validates everything this returns, so a drift here fails closed at the
+// API rather than saving something wrong.
+function detectSource(url) {
   let parsed;
   try {
     parsed = new URL(url);
@@ -242,24 +252,49 @@ function parseYouTubeTarget(url) {
     return null;
   }
 
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+
+  for (const detect of [detectYouTubeVideo, detectYouTubeChannel]) {
+    const detected = detect(parsed);
+    if (detected) return detected;
+  }
+
+  return null;
+}
+
+function detectYouTubeVideo(parsed) {
   const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
   const path = parsed.pathname;
-  const isYouTube = host === "youtube.com" || host.endsWith(".youtube.com");
-  const video = (candidate) =>
-    /^[A-Za-z0-9_-]{11}$/.test(candidate || "") ? { kind: "video", id: candidate } : null;
+  const valid = (candidate) =>
+    /^[A-Za-z0-9_-]{11}$/.test(candidate || "")
+      ? { sourceType: "youtube_video", id: candidate }
+      : null;
 
-  if (host === "youtu.be") return video(path.slice(1).split("/")[0]);
-  if (!isYouTube) return null;
-  if (path === "/watch") return video(parsed.searchParams.get("v"));
+  if (host === "youtu.be") return valid(path.slice(1).split("/")[0]);
+  if (host !== "youtube.com" && !host.endsWith(".youtube.com")) return null;
+  if (path === "/watch") return valid(parsed.searchParams.get("v"));
 
   const segments = path.split("/").filter(Boolean);
+  if (segments.length >= 2 && (segments[0] === "shorts" || segments[0] === "live")) {
+    return valid(segments[1]);
+  }
+
+  return null;
+}
+
+function detectYouTubeChannel(parsed) {
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  if (host !== "youtube.com" && !host.endsWith(".youtube.com")) return null;
+
+  const segments = parsed.pathname.split("/").filter(Boolean);
   if (segments.length === 0) return null;
 
   const [first, second] = segments;
-  if (first === "shorts" || first === "live") return second ? video(second) : null;
-  if (first.startsWith("@") && first.length > 1) return { kind: "channel", id: first };
+  if (first.startsWith("@") && first.length > 1) {
+    return { sourceType: "youtube_channel", id: first };
+  }
   if ((first === "channel" || first === "c" || first === "user") && second) {
-    return { kind: "channel", id: second };
+    return { sourceType: "youtube_channel", id: second };
   }
 
   return null;

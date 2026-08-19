@@ -7,11 +7,16 @@
 // against a description of the video, not a description of the answer.
 import type {
   CapturedResource,
-  ResourceUnderstanding
+  ResourceUnderstanding,
+  SourceType
 } from "../../../shared/types/captured-resource.js";
 import { requestJson, toCleanString, toStringArray } from "./ai-client.js";
 
 const maxDescriptionCharacters = 4000;
+// Body text is capped harder than a description: it is noisier per character,
+// and a long article should not crowd out the title and description that
+// matter more.
+const maxPageTextCharacters = 6000;
 
 const understandingSchema = {
   type: "object",
@@ -58,13 +63,78 @@ export async function understandResource(
   };
 }
 
+// How each source type should be talked about. Kept as data rather than
+// branching so a new source type adds a row here instead of another
+// conditional threaded through the prompt.
+type SourceVoice = {
+  noun: string;
+  heading: string;
+  titleLabel: string;
+  // What the model should describe, and what belongs in coreIdeas.
+  describe: string;
+  coreIdeas: string;
+  // Label for the creator line, or null when the source has no meaningful
+  // author distinct from the title.
+  creatorLabel: string | null;
+};
+
+const voices: Record<SourceType, SourceVoice> = {
+  youtube_video: {
+    noun: "YouTube video",
+    heading: "VIDEO",
+    titleLabel: "Title",
+    describe: "what the video is about",
+    coreIdeas: "the concepts the video actually teaches or argues",
+    creatorLabel: "Channel"
+  },
+  youtube_channel: {
+    noun: "YouTube channel",
+    heading: "CHANNEL",
+    titleLabel: "Name",
+    describe: "what the channel publishes",
+    coreIdeas: "the recurring subjects the channel covers, not one video's topics",
+    creatorLabel: null
+  },
+  github_repo: {
+    noun: "GitHub repository",
+    heading: "REPOSITORY",
+    titleLabel: "Repository",
+    describe: "what the project does and what it is for",
+    coreIdeas: "the problems the project solves and the techniques it uses",
+    creatorLabel: "Owner"
+  },
+  article: {
+    noun: "article",
+    heading: "ARTICLE",
+    titleLabel: "Title",
+    describe: "what the article argues or explains",
+    coreIdeas: "the claims the article makes and the evidence it rests on",
+    creatorLabel: "Author"
+  },
+  website: {
+    noun: "web page",
+    heading: "PAGE",
+    titleLabel: "Title",
+    describe: "what this page offers or documents",
+    coreIdeas: "what the page is useful for",
+    creatorLabel: "Site"
+  },
+  research_paper: {
+    noun: "research paper",
+    heading: "PAPER",
+    titleLabel: "Title",
+    describe: "what the paper investigates and what it found",
+    coreIdeas: "the contribution, the method, and the findings",
+    creatorLabel: "Authors"
+  }
+};
+
 function buildPrompt(resource: CapturedResource): string {
-  const isChannel = resource.sourceType === "youtube_channel";
-  const noun = isChannel ? "YouTube channel" : "YouTube video";
+  const voice = voices[resource.sourceType];
 
   return [
-    `You are describing a ${noun} so it can be filed into a personal knowledge base.`,
-    `Describe only what the ${isChannel ? "channel publishes" : "video is about"}. Do not suggest where it should be filed.`,
+    `You are describing a ${voice.noun} so it can be filed into a personal knowledge base.`,
+    `Describe only ${voice.describe}. Do not suggest where it should be filed.`,
     "Base your answer on the title, name, and description below.",
     "If the description is thin, infer conservatively from the title and name, and keep the summary short rather than inventing specifics.",
     "Never invent facts, statistics, or claims that are not supported by the text provided.",
@@ -72,18 +142,22 @@ function buildPrompt(resource: CapturedResource): string {
     "The summary is two or three sentences, roughly 40 to 60 words. It should let",
     "someone skim it months from now and know what this covers and whether to reopen it.",
     "Name the specific subjects covered rather than describing them in the abstract.",
-    `Skip filler like "this ${isChannel ? "channel" : "video"} is about" - start with the substance.`,
-    isChannel
-      ? "coreIdeas should be the recurring subjects the channel covers, not one video's topics."
-      : "coreIdeas should be the concepts the video actually teaches or argues.",
+    `Skip filler like "this ${voice.noun} is about" - start with the substance.`,
+    `coreIdeas should be ${voice.coreIdeas}.`,
     "",
-    isChannel ? "CHANNEL" : "VIDEO",
-    `${isChannel ? "Name" : "Title"}: ${resource.title ?? "(unknown)"}`,
-    isChannel ? "" : `Channel: ${resource.creator ?? "(unknown)"}`,
+    voice.heading,
+    `${voice.titleLabel}: ${resource.title ?? "(unknown)"}`,
+    voice.creatorLabel ? `${voice.creatorLabel}: ${resource.creator ?? "(unknown)"}` : "",
     resource.publishedAt ? `Published: ${resource.publishedAt}` : "",
     "",
     "Description:",
     resource.description?.slice(0, maxDescriptionCharacters) || "(no description available)",
+    // pageText is null for every source that has a real description of its
+    // own. It carries the body for sources where the description is a stub -
+    // which is most of the web.
+    ...(resource.pageText
+      ? ["", "Page text:", resource.pageText.slice(0, maxPageTextCharacters)]
+      : []),
     "",
     "Return JSON matching the required schema."
   ]

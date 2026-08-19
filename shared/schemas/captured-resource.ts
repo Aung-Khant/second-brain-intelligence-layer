@@ -2,32 +2,27 @@
 // metadata fails loudly at the door rather than reaching the AI, where a wrong
 // title would quietly produce a confident, wrong classification.
 //
-// PAGE_IDENTITY_MISMATCH is the important one for videos - the extension reads
-// the URL and the DOM at slightly different moments, and YouTube is a
-// single-page app that swaps video content without a reload. Without this
-// check, clicking the extension mid-navigation can classify video A's
-// metadata under video B's URL.
-//
-// Channels are checked more loosely on purpose: a channel URL may address the
-// page by handle (@name) while the page's own data reports the stable UC id.
-// Those are both correct identities for the same channel and cannot be
-// compared directly, so requiring equality would reject valid captures.
+// The checks that apply to every source live here. The check that proves the
+// captured data really describes the page in the address bar is per-source and
+// lives with its adapter in shared/capture/source.ts, because how you prove it
+// depends entirely on what kind of identifier the source has - a video id can
+// be compared exactly, a general web page has nothing to compare but its URL.
 import { AppError } from "../types/errors.js";
 import type { CapturedResource } from "../types/captured-resource.js";
+import { cleanYouTubeTitle } from "../capture/youtube.js";
 import {
-  canonicalYouTubeUrl,
-  cleanYouTubeTitle,
-  parseYouTubeTarget,
-  parseYouTubeVideoId
-} from "../capture/youtube.js";
+  assertSourceIdentity,
+  canonicalUrlFor,
+  detectSource,
+  isSupportedSourceType
+} from "../capture/source.js";
 
 export function assertCapturedResource(value: unknown): asserts value is CapturedResource {
   if (!isRecord(value)) {
     throw new AppError("PAGE_EXTRACTION_FAILED", "No page data was captured.");
   }
 
-  const sourceType = value.sourceType;
-  if (sourceType !== "youtube_video" && sourceType !== "youtube_channel") {
+  if (!isSupportedSourceType(value.sourceType)) {
     throw new AppError(
       "UNSUPPORTED_RESOURCE",
       "Only YouTube videos and channels are supported right now."
@@ -35,75 +30,34 @@ export function assertCapturedResource(value: unknown): asserts value is Capture
   }
 
   const url = requireString(value.url, "url");
-  const target = parseYouTubeTarget(url);
+  const detected = detectSource(url);
 
-  if (!target) {
+  if (!detected) {
     throw new AppError(
       "UNSUPPORTED_RESOURCE",
       "This page is not a YouTube video or channel URL."
     );
   }
 
-  const expectedType = target.kind === "video" ? "youtube_video" : "youtube_channel";
-  if (expectedType !== sourceType) {
+  // The client claimed one kind of resource and the URL says another, which
+  // means the capture raced a navigation.
+  if (detected.sourceType !== value.sourceType) {
     throw new AppError(
       "PAGE_IDENTITY_MISMATCH",
-      `The URL is a ${target.kind}, but the captured data says otherwise. Reload and try again.`
+      "The captured data does not match the page URL. Reload and try again."
     );
   }
 
   requireString(value.sourceId, "sourceId");
 
-  if (!cleanYouTubeTitle(typeof value.title === "string" ? value.title : null)) {
+  if (!cleanTitle(value.title)) {
     throw new AppError(
       "PAGE_EXTRACTION_FAILED",
       "Could not read the title. Let the page finish loading and try again."
     );
   }
 
-  if (sourceType === "youtube_video") {
-    assertVideoIdentity(value, target.id);
-  } else {
-    assertChannelIdentity(value, target.id);
-  }
-}
-
-// A channel can be addressed by handle (@name) or by UC id, and those are not
-// interchangeable - so this only compares like with like. When the captured
-// id is the same *kind* as the URL's, they must agree: a mismatch means the
-// capture raced a single-page-app navigation and describes another channel.
-function assertChannelIdentity(value: Record<string, unknown>, idFromUrl: string): void {
-  const sourceId = typeof value.sourceId === "string" ? value.sourceId : "";
-  const bothHandles = idFromUrl.startsWith("@") && sourceId.startsWith("@");
-  const bothIds = !idFromUrl.startsWith("@") && !sourceId.startsWith("@");
-
-  if (!bothHandles && !bothIds) return;
-
-  if (sourceId.toLowerCase() !== idFromUrl.toLowerCase()) {
-    throw new AppError(
-      "PAGE_IDENTITY_MISMATCH",
-      "The captured channel does not match the page URL. Reload the page and try again."
-    );
-  }
-}
-
-function assertVideoIdentity(value: Record<string, unknown>, videoIdFromUrl: string): void {
-  if (value.sourceId !== videoIdFromUrl) {
-    throw new AppError(
-      "PAGE_IDENTITY_MISMATCH",
-      "The captured video does not match the page URL. Reload the page and try again."
-    );
-  }
-
-  if (typeof value.canonicalUrl === "string") {
-    const fromCanonical = parseYouTubeVideoId(value.canonicalUrl);
-    if (fromCanonical && fromCanonical !== value.sourceId) {
-      throw new AppError(
-        "PAGE_IDENTITY_MISMATCH",
-        "The canonical link points at a different video. Reload the page and try again."
-      );
-    }
-  }
+  assertSourceIdentity(value, detected);
 }
 
 // Trusts only the fields that survived validation. canonicalUrl is rebuilt
@@ -111,12 +65,12 @@ function assertVideoIdentity(value: Record<string, unknown>, videoIdFromUrl: str
 // can't put a wrong URL into Notion, and the title is stripped of tab-title
 // noise like a "(87)" unread badge.
 export function normalizeCapturedResource(resource: CapturedResource): CapturedResource {
-  const target = parseYouTubeTarget(resource.url);
+  const detected = detectSource(resource.url);
 
   return {
     ...resource,
-    canonicalUrl: target ? canonicalYouTubeUrl(target) : resource.canonicalUrl,
-    title: cleanYouTubeTitle(resource.title),
+    canonicalUrl: (detected && canonicalUrlFor(detected)) ?? resource.canonicalUrl,
+    title: cleanTitle(resource.title),
     creator: emptyToNull(resource.creator),
     creatorId: emptyToNull(resource.creatorId),
     description: emptyToNull(resource.description),
@@ -124,6 +78,14 @@ export function normalizeCapturedResource(resource: CapturedResource): CapturedR
     publishedAt: emptyToNull(resource.publishedAt),
     thumbnailUrl: emptyToNull(resource.thumbnailUrl)
   };
+}
+
+// Tab-title cleanup is currently YouTube-shaped. Other sources will want their
+// own site-suffix stripping, at which point this moves behind the adapter -
+// but inventing that indirection before a second case exists would be guessing
+// at what it needs.
+function cleanTitle(value: unknown): string | null {
+  return cleanYouTubeTitle(typeof value === "string" ? value : null);
 }
 
 function emptyToNull(value: string | null): string | null {

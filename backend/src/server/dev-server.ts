@@ -20,6 +20,12 @@ import {
   type SaveApiRequest
 } from "./api.js";
 import { readNotionTaxonomyCacheStatus } from "../notion/taxonomy.js";
+import {
+  analyzeResource,
+  saveAnalyzedResource,
+  type AnalyzeRequest,
+  type SaveRequest
+} from "../v1/api.js";
 
 type JsonResponse = {
   statusCode: number;
@@ -53,6 +59,20 @@ export async function handleApiRequest(
           service: "second-brain-intelligence-layer",
           notionTaxonomyCache: readNotionTaxonomyCacheStatus()
         }
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/resource/analyze") {
+      return {
+        statusCode: 200,
+        body: await analyzeResource(body as AnalyzeRequest)
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/resource/save") {
+      return {
+        statusCode: 200,
+        body: await saveAnalyzedResource(body as SaveRequest)
       };
     }
 

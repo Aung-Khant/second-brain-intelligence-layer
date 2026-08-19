@@ -1,138 +1,92 @@
-<!doctype html>
-<!--
-  Structure for the capture popup. All behavior lives in popup.js; this is
-  just the static form markup it reads from and writes into by element id
-  (see the `elements` object at the top of popup.js for the full id list).
--->
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Second Brain Capture</title>
-    <link rel="stylesheet" href="popup.css">
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Save to Brain</title>
   </head>
   <body>
-    <main class="shell">
-      <header class="topbar">
-        <div>
-          <h1>Second Brain</h1>
-          <p id="pageHost">Ready</p>
-        </div>
-        <span id="serverState" class="pill">Checking</span>
+    <main class="popup">
+      <header class="header">
+        <h1 class="header__title">Save to Brain</h1>
+        <span id="server-state" class="pill pill--muted">Checking…</span>
       </header>
 
-      <section class="resource">
-        <label for="resourceTitle">Title</label>
-        <input id="resourceTitle" type="text" autocomplete="off">
-
-        <label for="resourceUrl">URL</label>
-        <input id="resourceUrl" type="url" autocomplete="off">
-
-        <label for="resourceType">Type</label>
-        <select id="resourceType">
-          <option value="webpage">Webpage</option>
-          <option value="article">Article</option>
-          <option value="youtube_video">YouTube Video</option>
-          <option value="youtube_channel">YouTube Channel</option>
-        </select>
+      <section id="video" class="video" hidden>
+        <p id="video-title" class="video__title"></p>
+        <p id="video-creator" class="video__creator"></p>
       </section>
 
-      <section class="actions">
-        <button id="classifyButton" type="button">Suggest</button>
-        <button id="enhanceButton" type="button" disabled>Improve</button>
-        <button id="saveButton" type="button" disabled>Save</button>
-      </section>
+      <p id="status" class="status" hidden></p>
 
-      <p id="status" class="status">Open something worth saving, then get suggestions.</p>
-
-      <section id="summarySection" class="summary" hidden>
-        <div class="sectionHeader">
-          <h2>Summary</h2>
-          <span id="engineBadge" class="miniPill" hidden></span>
-        </div>
-        <p id="summary"></p>
-      </section>
-
-      <section id="relationsSection" class="relations" hidden>
-        <div class="field">
-          <div class="labelRow">
-            <label for="saveIntent">Save Intent</label>
-            <span class="requiredLabel">Required</span>
+      <section id="results" class="results" hidden>
+        <div class="group" data-kind="areas">
+          <h2 class="group__heading">Area</h2>
+          <ul class="group__list" data-list="areas"></ul>
+          <div class="adder">
+            <input
+              class="adder__input"
+              data-input="areas"
+              list="area-options"
+              placeholder="Add an existing Area…"
+              autocomplete="off"
+            />
+            <datalist id="area-options"></datalist>
+            <button class="adder__button" data-add="areas" type="button">Add</button>
           </div>
-          <select id="saveIntent">
-            <option value="">Choose intent</option>
-            <option value="learn">Learn</option>
-            <option value="use_for_project">Use for Project</option>
-            <option value="research">Research</option>
-            <option value="reference">Reference</option>
-            <option value="content_inspiration">Content Inspiration</option>
-            <option value="explore_later">Explore Later</option>
-            <option value="other">Other</option>
-          </select>
         </div>
 
-        <div class="field">
-          <label for="whySaved">Why Saved</label>
-          <textarea id="whySaved" rows="3" placeholder="Optional"></textarea>
+        <div class="group" data-kind="projects">
+          <h2 class="group__heading">Project</h2>
+          <ul class="group__list" data-list="projects"></ul>
+          <div class="adder">
+            <input
+              class="adder__input"
+              data-input="projects"
+              list="project-options"
+              placeholder="Add an existing Project…"
+              autocomplete="off"
+            />
+            <datalist id="project-options"></datalist>
+            <button class="adder__button" data-add="projects" type="button">Add</button>
+          </div>
         </div>
 
-        <div class="relationGroup">
-          <h2>Area</h2>
-          <div id="areaSuggestionPanel" class="areaSuggestionPanel" hidden>
-            <div id="areaSuggestionEyebrow" class="suggestionEyebrow">Suggested Area</div>
-            <div class="areaSuggestionHeader">
-              <span id="areaSuggestionName" class="relationName"></span>
-              <span id="areaSuggestionConfidence" class="confidence"></span>
-            </div>
-            <p id="areaSuggestionReason" class="relationReason"></p>
+        <div class="group" data-kind="topics">
+          <h2 class="group__heading">Topics</h2>
+          <ul class="group__list" data-list="topics"></ul>
+          <div class="adder">
+            <input
+              class="adder__input"
+              data-input="topics"
+              list="topic-options"
+              placeholder="Add an existing Topic…"
+              autocomplete="off"
+            />
+            <datalist id="topic-options"></datalist>
+            <button class="adder__button" data-add="topics" type="button">Add</button>
           </div>
-          <p id="areaEmptyState" class="empty">No Area selected yet.</p>
-          <div class="areaActions">
-            <button id="acceptAreaSuggestionButton" class="smallButton" type="button" disabled>Accept suggestion</button>
-            <button id="chooseAreaButton" class="smallButton secondaryButton" type="button">Change Area</button>
-            <button id="skipAreaButton" class="smallButton quietButton" type="button">Skip Area</button>
-          </div>
-          <div id="areaManualGroup" class="pickerRow" hidden>
-            <select id="areaPicker"></select>
-            <button id="showNewAreaButton" class="smallButton quietButton" type="button">Create new Area</button>
-          </div>
-          <div id="newAreaGroup" class="newAreaRow" hidden>
-            <input id="newAreaName" type="text" autocomplete="off" placeholder="New Area name">
-            <button id="createAreaButton" class="smallButton" type="button">Create</button>
-          </div>
-          <div id="areasList" class="relationList areaSelectionList"></div>
         </div>
 
-        <div class="relationGroup">
-          <h2>Topics</h2>
-          <div class="singlePickerRow">
-            <select id="topicPicker"></select>
-          </div>
-          <div id="newTopicGroup" class="newAreaRow" hidden>
-            <input id="newTopicName" type="text" autocomplete="off" placeholder="New Topic name">
-            <button id="createTopicButton" class="smallButton" type="button">Create</button>
-          </div>
-          <div id="topicsList" class="relationList"></div>
-        </div>
-
-        <div id="newTopicsGroup" class="relationGroup" hidden>
-          <h2>Suggested New Topics</h2>
-          <div id="newTopicsList" class="relationList"></div>
-        </div>
-
-        <div class="relationGroup">
-          <h2>Projects</h2>
-          <div class="singlePickerRow">
-            <select id="projectPicker"></select>
-          </div>
-          <div id="newProjectGroup" class="newAreaRow" hidden>
-            <input id="newProjectName" type="text" autocomplete="off" placeholder="New Project name">
-            <button id="createProjectButton" class="smallButton" type="button">Create</button>
-          </div>
-          <div id="projectsList" class="relationList"></div>
+        <div class="why">
+          <label class="why__label" for="why-saved">Why are you saving this?</label>
+          <textarea
+            id="why-saved"
+            class="why__input"
+            rows="3"
+            placeholder="Why does this matter to you?"
+          ></textarea>
         </div>
       </section>
+
+      <footer class="footer">
+        <button id="analyze" class="button button--secondary" type="button">Analyze</button>
+        <button id="save" class="button button--primary" type="button" disabled>
+          Save to Brain
+        </button>
+      </footer>
     </main>
+
     <script src="popup.js"></script>
   </body>
 </html>

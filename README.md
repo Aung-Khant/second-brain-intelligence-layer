@@ -1,4 +1,44 @@
-# Second Brain Intelligence Layer V0
+# Second Brain Intelligence Layer
+
+## MVP: save a YouTube video to your Second Brain
+
+The current build is one end-to-end path: open a YouTube video, click the
+extension, review the suggested Areas/Projects/Topics, say why you saved it, and
+write it to Notion.
+
+Requires a Notion key and an AI key in `.env` — see the sections below.
+
+```bash
+npm run server
+```
+
+Then load `extension/` as an unpacked extension (`chrome://extensions` →
+Developer mode → Load unpacked). Open a YouTube video, click the extension, and
+press **Analyze**.
+
+What you get:
+
+- Entities at 0.90 confidence and above are checked for you.
+- Entities from 0.70 to 0.89 are shown unchecked as suggestions.
+- Anything weaker is left out. Empty is a valid, expected answer.
+- You can uncheck anything, or add any existing Area, Project, or Topic by name.
+- The extension cannot create new taxonomy. That is deliberate.
+- **Why Saved** is yours. Nothing writes it for you.
+
+Every suggestion is compared against what you actually chose and appended to
+`correction-logs/corrections.jsonl` (gitignored, local only) as one row per
+entity: `accepted`, `rejected`, or `manually_added`. Notion holds clean
+knowledge; that file holds the evidence of how you think.
+
+Only YouTube videos are supported. Articles, channels, and PDFs are not.
+
+---
+
+## Legacy V0
+
+Everything below documents the earlier V0 pipeline (`/api/classify`,
+`/api/enhance`, the CLI classifiers, and the gold-dataset evaluation). It still
+works, but the MVP flow above does not use it.
 
 V0 tests one hypothesis: can AI-like classification organize a trusted web resource into an existing Second Brain while preserving human meaning?
 

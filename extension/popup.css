@@ -228,25 +228,79 @@ body {
   flex-shrink: 0;
 }
 
-.adder {
-  width: 100%;
+/* Replaces a native <datalist>, whose dropdown Chrome renders as an OS popup
+   outside the extension panel - oversized and unstyleable. */
+.picker {
   margin-top: 5px;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 5px 7px;
+  border-radius: 6px;
   background: var(--bg);
+  overflow: hidden;
+}
+
+.picker__input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  background: transparent;
   color: var(--fg);
   font-family: inherit;
   font-size: 12.5px;
 }
 
-.adder:focus {
+.picker__input:focus {
   outline: none;
-  border-color: var(--accent);
 }
 
-.adder::placeholder {
+.picker__input::placeholder {
   color: var(--faint);
+}
+
+.picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 3px;
+  /* Caps at roughly six rows, so a long taxonomy scrolls inside the picker
+     instead of pushing Save off the bottom of the popup. */
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.picker__option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 7px;
+  background: none;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker__option:hover,
+.picker__option:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+.picker__option--create {
+  color: var(--create);
+}
+
+.picker__option--create:hover {
+  background: var(--create-soft);
+}
+
+.picker__empty {
+  padding: 6px 7px;
+  color: var(--faint);
+  font-size: 12.5px;
 }
 
 /* Offered only when what the user typed matches no existing entity. Creating

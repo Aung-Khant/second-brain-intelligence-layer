@@ -19,7 +19,7 @@ import { requestJson, toCleanString, toConfidence } from "./ai-client.js";
 // Matches the "suggest" threshold in api.ts. Anything below this would render
 // as an unselected row the user has to read and dismiss, which costs more
 // attention than the suggestion is worth.
-const noiseFloor = 0.7;
+const noiseFloor = 0.8;
 
 const candidateSchema = {
   type: "object",
@@ -220,6 +220,11 @@ function buildPrompt(
     "- A video on animating math visualisations is NOT about 'Content Strategy' just because both involve making content.",
     "- A video on vector databases is NOT about 'Web Development' just because vector databases get used in web apps.",
     "- A chemistry tutorial is NOT about 'Maths' just because both are studied subjects.",
+    "- A hardware tutorial is NOT about 'Study Skills' just because it teaches something.",
+    "  'Study Skills' means learning technique itself, not any resource you learn from.",
+    "- An introduction to a tool is NOT about every application of that tool. A beginner",
+    "  Arduino video is not about 'Automation' merely because Arduinos can automate things;",
+    "  it would have to actually be about automating something.",
     "- A video on vector databases IS about 'Retrieval' and 'Embeddings' - those are its actual subject.",
     "If your reason would be 'both relate to X broadly', omit the candidate entirely.",
     "",
@@ -253,8 +258,9 @@ function buildPrompt(
     "",
     "CONFIDENCE (decimal 0 to 1, never a percentage)",
     "- 0.90 and above: the resource is unmistakably, centrally about this entity. Auto-selected for the user.",
-    "- 0.70 to 0.89: clearly relevant and worth suggesting, but the user decides.",
-    "- Below 0.70: do not return it at all. Weak guesses cost the user more than a missing suggestion.",
+    "- 0.80 to 0.89: clearly relevant and worth suggesting, but the user decides.",
+    "- Below 0.80: do not return it at all. Weak guesses cost the user more than a missing suggestion.",
+    "  A tangential connection is not worth 0.80. If you are reaching, leave it out.",
     "",
     ...buildHintSection(hints),
     resource.sourceType === "youtube_channel"

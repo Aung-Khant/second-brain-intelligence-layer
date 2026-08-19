@@ -20,11 +20,15 @@ const classification: ClassificationResult = {
   ]
 };
 
-test("maps confidence onto the spec's three selection bands", () => {
+// The suggest floor was raised from the spec's 0.70 to 0.80: at 0.70 the
+// classifier surfaced tangential matches the user had to read and dismiss,
+// which costs more attention than a missed suggestion costs recall.
+test("maps confidence onto the three selection bands", () => {
   assert.equal(selectionStateFor(0.97), "auto_selected");
   assert.equal(selectionStateFor(0.9), "auto_selected");
   assert.equal(selectionStateFor(0.89), "suggested");
-  assert.equal(selectionStateFor(0.7), "suggested");
+  assert.equal(selectionStateFor(0.8), "suggested");
+  assert.equal(selectionStateFor(0.79), "unselected");
   assert.equal(selectionStateFor(0.58), "unselected");
 });
 

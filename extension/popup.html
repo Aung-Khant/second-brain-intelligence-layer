@@ -22,15 +22,15 @@
             <button class="group__add" data-reveal="areas" type="button">Add</button>
           </div>
           <ul class="group__list" data-list="areas"></ul>
-          <input
-            class="adder"
-            data-input="areas"
-            list="area-options"
-            placeholder="Type an existing Area, then Enter"
-            autocomplete="off"
-            hidden
-          />
-          <datalist id="area-options"></datalist>
+          <div class="picker" data-picker="areas" hidden>
+            <input
+              class="picker__input"
+              data-input="areas"
+              placeholder="Search Areas"
+              autocomplete="off"
+            />
+            <ul class="picker__list" data-options="areas"></ul>
+          </div>
         </div>
 
         <div class="group" data-kind="projects">
@@ -39,15 +39,15 @@
             <button class="group__add" data-reveal="projects" type="button">Add</button>
           </div>
           <ul class="group__list" data-list="projects"></ul>
-          <input
-            class="adder"
-            data-input="projects"
-            list="project-options"
-            placeholder="Type an existing Project, then Enter"
-            autocomplete="off"
-            hidden
-          />
-          <datalist id="project-options"></datalist>
+          <div class="picker" data-picker="projects" hidden>
+            <input
+              class="picker__input"
+              data-input="projects"
+              placeholder="Search Projects"
+              autocomplete="off"
+            />
+            <ul class="picker__list" data-options="projects"></ul>
+          </div>
         </div>
 
         <div class="group" data-kind="topics">
@@ -56,15 +56,15 @@
             <button class="group__add" data-reveal="topics" type="button">Add</button>
           </div>
           <ul class="group__list" data-list="topics"></ul>
-          <input
-            class="adder"
-            data-input="topics"
-            list="topic-options"
-            placeholder="Type an existing Topic, then Enter"
-            autocomplete="off"
-            hidden
-          />
-          <datalist id="topic-options"></datalist>
+          <div class="picker" data-picker="topics" hidden>
+            <input
+              class="picker__input"
+              data-input="topics"
+              placeholder="Search Topics"
+              autocomplete="off"
+            />
+            <ul class="picker__list" data-options="topics"></ul>
+          </div>
         </div>
 
         <div class="why">

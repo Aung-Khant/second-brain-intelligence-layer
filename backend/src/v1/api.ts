@@ -30,9 +30,12 @@ import {
 import { saveVideoResource, type SavedResource } from "./save.js";
 import { understandResource } from "./understand.js";
 
+// A suggestion the user has to read and dismiss costs more attention than a
+// missing one costs recall, so the bar to appear at all is high. Below this,
+// candidates are dropped server-side rather than rendered unticked.
 export const confidenceThresholds = {
   autoSelect: 0.9,
-  suggest: 0.7
+  suggest: 0.8
 } as const;
 
 export type ScoredCandidate = ClassificationCandidate & {

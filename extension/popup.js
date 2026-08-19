@@ -44,15 +44,30 @@ document.addEventListener("DOMContentLoaded", () => {
       .addEventListener("click", () => revealAdder(kind));
 
     const input = document.querySelector(`[data-input="${kind}"]`);
+    input.addEventListener("input", () => renderPickerOptions(kind));
     input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        hideAdder(kind);
+        return;
+      }
+      // Enter is a shortcut for the first result, never a requirement -
+      // clicking an option selects it outright.
       if (event.key === "Enter") {
         event.preventDefault();
-        addFromPicker(kind);
+        document.querySelector(`[data-options="${kind}"] .picker__option`)?.click();
       }
-      if (event.key === "Escape") hideAdder(kind);
     });
-    input.addEventListener("input", () => renderCreateOffer(kind));
   }
+
+  // A click inside the popup that isn't on a picker closes any open one.
+  document.addEventListener("mousedown", (event) => {
+    for (const kind of kinds) {
+      const picker = document.querySelector(`[data-picker="${kind}"]`);
+      const addButton = document.querySelector(`[data-reveal="${kind}"]`);
+      if (picker.hidden) continue;
+      if (!picker.contains(event.target) && event.target !== addButton) hideAdder(kind);
+    }
+  });
 
   start();
 });
@@ -264,7 +279,6 @@ async function analyze() {
 
     seedSelection(response.classification);
     renderVideo();
-    renderOptions();
     renderAll();
 
     elements.results.hidden = false;
@@ -321,20 +335,6 @@ function updateSaveState() {
   elements.whyRequired.className = `why__required${
     hasWhy ? "" : " why__required--unmet"
   }`;
-}
-
-function renderOptions() {
-  const ids = { areas: "area-options", projects: "project-options", topics: "topic-options" };
-
-  for (const kind of kinds) {
-    document.getElementById(ids[kind]).replaceChildren(
-      ...(state.taxonomy[kind] ?? []).map((entity) => {
-        const option = document.createElement("option");
-        option.value = entity.name;
-        return option;
-      })
-    );
-  }
 }
 
 function renderAll() {
@@ -452,73 +452,85 @@ function buildRow(kind, candidate, isSelected) {
 }
 
 function revealAdder(kind) {
+  const picker = document.querySelector(`[data-picker="${kind}"]`);
   const input = document.querySelector(`[data-input="${kind}"]`);
-  input.hidden = false;
+
+  picker.hidden = false;
+  input.value = "";
+  // Show the full list straight away. The common case is picking something
+  // that exists, and that shouldn't require typing first.
+  renderPickerOptions(kind);
   input.focus();
 }
 
 function hideAdder(kind) {
+  const picker = document.querySelector(`[data-picker="${kind}"]`);
+  document.querySelector(`[data-input="${kind}"]`).value = "";
+  picker.hidden = true;
+}
+
+// The options list: everything not already selected, filtered by what's typed,
+// plus a create row when the typed name doesn't exist.
+function renderPickerOptions(kind) {
   const input = document.querySelector(`[data-input="${kind}"]`);
-  input.value = "";
-  input.hidden = true;
-  renderCreateOffer(kind);
+  const list = document.querySelector(`[data-options="${kind}"]`);
+  const typed = input.value.trim().toLowerCase();
+
+  const matches = (state.taxonomy[kind] ?? [])
+    .filter((entity) => !state.selected[kind].has(entity.id))
+    .filter((entity) => entity.name.toLowerCase().includes(typed));
+
+  const rows = matches.map((entity) => {
+    const item = document.createElement("li");
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "picker__option";
+    option.textContent = entity.name;
+    option.onclick = () => {
+      state.selected[kind].set(entity.id, entity.name);
+      hideAdder(kind);
+      renderGroup(kind);
+      showStatus("");
+    };
+    item.append(option);
+    return item;
+  });
+
+  const exact = input.value.trim() && findExisting(kind, input.value.trim());
+  if (input.value.trim() && !exact) {
+    const item = document.createElement("li");
+    const create = document.createElement("button");
+    create.type = "button";
+    create.className = "picker__option picker__option--create";
+    create.replaceChildren(
+      Object.assign(document.createElement("span"), {
+        className: "create__plus",
+        textContent: "+"
+      }),
+      Object.assign(document.createElement("span"), {
+        className: "create__name",
+        textContent: `Create ${labelFor(kind)} "${input.value.trim()}"`
+      })
+    );
+    create.onclick = () => createEntity(kind, input.value.trim(), create);
+    item.append(create);
+    rows.push(item);
+  }
+
+  if (rows.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "picker__empty";
+    empty.textContent = "Nothing left to add";
+    rows.push(empty);
+  }
+
+  list.replaceChildren(...rows);
 }
 
 function findExisting(kind, typed) {
   return (state.taxonomy[kind] ?? []).find(
     (entity) => entity.name.toLowerCase() === typed.trim().toLowerCase()
   );
-}
-
-function addFromPicker(kind) {
-  const input = document.querySelector(`[data-input="${kind}"]`);
-  const typed = input.value.trim();
-  if (!typed) return;
-
-  const match = findExisting(kind, typed);
-  if (!match) {
-    // Don't create on Enter. Surface the option and let the user commit to it
-    // deliberately - new taxonomy should never appear by reflex.
-    renderCreateOffer(kind);
-    return;
-  }
-
-  state.selected[kind].set(match.id, match.name);
-  hideAdder(kind);
-  renderGroup(kind);
-  showStatus("");
-}
-
-// Shows a "Create X" button under the input whenever the typed text names
-// something that doesn't exist yet.
-function renderCreateOffer(kind) {
-  const input = document.querySelector(`[data-input="${kind}"]`);
-  const group = document.querySelector(`[data-kind="${kind}"]`);
-  const existingButton = group.querySelector(".create");
-  const typed = input.hidden ? "" : input.value.trim();
-
-  if (!typed || findExisting(kind, typed)) {
-    existingButton?.remove();
-    return;
-  }
-
-  const button = existingButton ?? document.createElement("button");
-  button.className = "create";
-  button.type = "button";
-  button.disabled = false;
-  button.replaceChildren(
-    Object.assign(document.createElement("span"), {
-      className: "create__plus",
-      textContent: "+"
-    }),
-    Object.assign(document.createElement("span"), {
-      className: "create__name",
-      textContent: `Create ${labelFor(kind)} "${typed}"`
-    })
-  );
-  button.onclick = () => createEntity(kind, typed, button);
-
-  if (!existingButton) input.insertAdjacentElement("afterend", button);
 }
 
 async function createEntity(kind, name, button) {
@@ -531,21 +543,19 @@ async function createEntity(kind, name, button) {
       name
     });
 
-    // Add to the local taxonomy so it's immediately selectable and shows up in
-    // the datalist without needing to re-analyze.
+    // Add to the local taxonomy so it's immediately selectable without
+    // needing to re-analyze.
     state.taxonomy[kind] = [...(state.taxonomy[kind] ?? []), { id: created.id, name: created.name }];
     state.selected[kind].set(created.id, created.name);
 
     // Once created it exists, so proposalsFor() will filter it out and the row
     // re-renders as a normal selected entity.
     hideAdder(kind);
-    renderOptions();
     renderGroup(kind);
     showStatus(created.created ? `Created ${labelFor(kind)} "${created.name}".` : "");
   } catch (error) {
     showStatus(error.message, true);
     button.disabled = false;
-    renderCreateOffer(kind);
   }
 }
 

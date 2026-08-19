@@ -26,6 +26,7 @@ import {
   type AnalyzeRequest,
   type SaveRequest
 } from "../v1/api.js";
+import { createTaxonomyEntity, type CreateEntityInput } from "../v1/create-entity.js";
 
 type JsonResponse = {
   statusCode: number;
@@ -73,6 +74,13 @@ export async function handleApiRequest(
       return {
         statusCode: 200,
         body: await saveAnalyzedResource(body as SaveRequest)
+      };
+    }
+
+    if (method === "POST" && pathname === "/api/taxonomy/create") {
+      return {
+        statusCode: 200,
+        body: await createTaxonomyEntity(body as CreateEntityInput)
       };
     }
 

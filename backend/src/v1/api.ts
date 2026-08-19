@@ -60,6 +60,7 @@ export type SaveRequest = {
   classification: ClassificationResult;
   selection: FinalSelection;
   whySaved?: string;
+  summary?: string;
 };
 
 export type SaveResponse = SavedResource;
@@ -74,10 +75,21 @@ export async function analyzeResource(input: AnalyzeRequest): Promise<AnalyzeRes
   assertCapturedResource(input?.resource);
   const resource = normalizeCapturedResource(input.resource);
 
-  const taxonomy = await fetchNotionTaxonomy();
-  const understanding = await understandResource(resource);
+  // The taxonomy read and pass 1 don't depend on each other, so they overlap.
+  // Only pass 2 needs both. On a cold Notion cache this removes a full
+  // round-trip from the user's wait.
+  const [taxonomy, understanding] = await Promise.all([
+    fetchNotionTaxonomy(),
+    understandResource(resource)
+  ]);
+
   const hints = await retrieveRelevantCorrections(understanding);
-  const classification = await classifyAgainstTaxonomy(understanding, taxonomy, hints);
+  const classification = await classifyAgainstTaxonomy(
+    resource,
+    understanding,
+    taxonomy,
+    hints
+  );
 
   return {
     resource,
@@ -96,13 +108,25 @@ export async function saveAnalyzedResource(input: SaveRequest): Promise<SaveResp
     throw new AppError("PAGE_EXTRACTION_FAILED", "The video title is missing.");
   }
 
+  // Why Saved is the one thing no code and no model can supply. Enforced here
+  // as well as in the popup so the rule holds for any client.
+  const whySaved = input.whySaved?.trim();
+  if (!whySaved) {
+    throw new AppError(
+      "PAGE_EXTRACTION_FAILED",
+      "Why Saved is required — say why this matters to you."
+    );
+  }
+
   const selection = normalizeSelection(input.selection);
   const classification = normalizeClassification(input.classification);
 
   const result = await saveVideoResource({
     name,
     url: resource.canonicalUrl ?? resource.url,
-    whySaved: input.whySaved,
+    sourceType: resource.sourceType,
+    whySaved,
+    summary: input.summary,
     areaIds: selection.areaIds,
     projectIds: selection.projectIds,
     topicIds: selection.topicIds

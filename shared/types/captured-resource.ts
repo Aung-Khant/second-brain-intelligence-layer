@@ -9,10 +9,12 @@
 // Confidence here is 0-1, unlike the legacy pipeline's 0-100. See
 // selectionStateFor for the thresholds that turn a confidence into UI state.
 
+export type SourceType = "youtube_video" | "youtube_channel";
+
 export type CapturedResource = {
   url: string;
   canonicalUrl: string | null;
-  sourceType: "youtube_video";
+  sourceType: SourceType;
   sourceId: string;
   title: string | null;
   creator: string | null;

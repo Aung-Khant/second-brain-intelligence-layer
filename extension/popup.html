@@ -7,83 +7,81 @@
   </head>
   <body>
     <main class="popup">
-      <header class="header">
-        <h1 class="header__title">Save to Brain</h1>
-        <span id="server-state" class="pill pill--muted">Checking…</span>
-      </header>
-
       <section id="video" class="video" hidden>
         <p id="video-title" class="video__title"></p>
         <p id="video-creator" class="video__creator"></p>
+        <p id="video-summary" class="video__summary" hidden></p>
       </section>
 
       <p id="status" class="status" hidden></p>
 
       <section id="results" class="results" hidden>
         <div class="group" data-kind="areas">
-          <h2 class="group__heading">Area</h2>
-          <ul class="group__list" data-list="areas"></ul>
-          <div class="adder">
-            <input
-              class="adder__input"
-              data-input="areas"
-              list="area-options"
-              placeholder="Add an existing Area…"
-              autocomplete="off"
-            />
-            <datalist id="area-options"></datalist>
-            <button class="adder__button" data-add="areas" type="button">Add</button>
+          <div class="group__head">
+            <h2 class="group__heading">Area</h2>
+            <button class="group__add" data-reveal="areas" type="button">Add</button>
           </div>
+          <ul class="group__list" data-list="areas"></ul>
+          <input
+            class="adder"
+            data-input="areas"
+            list="area-options"
+            placeholder="Type an existing Area, then Enter"
+            autocomplete="off"
+            hidden
+          />
+          <datalist id="area-options"></datalist>
         </div>
 
         <div class="group" data-kind="projects">
-          <h2 class="group__heading">Project</h2>
-          <ul class="group__list" data-list="projects"></ul>
-          <div class="adder">
-            <input
-              class="adder__input"
-              data-input="projects"
-              list="project-options"
-              placeholder="Add an existing Project…"
-              autocomplete="off"
-            />
-            <datalist id="project-options"></datalist>
-            <button class="adder__button" data-add="projects" type="button">Add</button>
+          <div class="group__head">
+            <h2 class="group__heading">Project</h2>
+            <button class="group__add" data-reveal="projects" type="button">Add</button>
           </div>
+          <ul class="group__list" data-list="projects"></ul>
+          <input
+            class="adder"
+            data-input="projects"
+            list="project-options"
+            placeholder="Type an existing Project, then Enter"
+            autocomplete="off"
+            hidden
+          />
+          <datalist id="project-options"></datalist>
         </div>
 
         <div class="group" data-kind="topics">
-          <h2 class="group__heading">Topics</h2>
-          <ul class="group__list" data-list="topics"></ul>
-          <div class="adder">
-            <input
-              class="adder__input"
-              data-input="topics"
-              list="topic-options"
-              placeholder="Add an existing Topic…"
-              autocomplete="off"
-            />
-            <datalist id="topic-options"></datalist>
-            <button class="adder__button" data-add="topics" type="button">Add</button>
+          <div class="group__head">
+            <h2 class="group__heading">Topics</h2>
+            <button class="group__add" data-reveal="topics" type="button">Add</button>
           </div>
+          <ul class="group__list" data-list="topics"></ul>
+          <input
+            class="adder"
+            data-input="topics"
+            list="topic-options"
+            placeholder="Type an existing Topic, then Enter"
+            autocomplete="off"
+            hidden
+          />
+          <datalist id="topic-options"></datalist>
         </div>
 
         <div class="why">
-          <label class="why__label" for="why-saved">Why are you saving this?</label>
+          <label class="why__label" for="why-saved">
+            Why saved? <span class="why__required">required</span>
+          </label>
           <textarea
             id="why-saved"
             class="why__input"
-            rows="3"
-            placeholder="Why does this matter to you?"
+            rows="2"
+            placeholder="Why saved?"
           ></textarea>
         </div>
       </section>
 
       <footer class="footer">
-        <button id="analyze" class="button button--secondary" type="button">Analyze</button>
-        <button id="save" class="button button--primary" type="button" disabled>
-          Save to Brain
-        </button>
+        <button id="save" class="button" type="button" disabled>Save to Brain</button>
       </footer>
     </main>
 

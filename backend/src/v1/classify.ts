@@ -6,6 +6,7 @@
 // the name is taken from the taxonomy rather than from the model's output, so
 // a hallucinated Topic can never reach Notion even if the model insists on it.
 import type {
+  CapturedResource,
   ClassificationCandidate,
   ClassificationResult,
   ResourceUnderstanding
@@ -13,6 +14,11 @@ import type {
 import type { Area, Project, Taxonomy, Topic } from "../../../shared/types/taxonomy.js";
 import type { CorrectionHint } from "./corrections.js";
 import { requestJson, toCleanString, toConfidence } from "./ai-client.js";
+
+// Matches the "suggest" threshold in api.ts. Anything below this would render
+// as an unselected row the user has to read and dismiss, which costs more
+// attention than the suggestion is worth.
+const noiseFloor = 0.7;
 
 const candidateSchema = {
   type: "object",
@@ -25,7 +31,11 @@ const candidateSchema = {
       maximum: 1,
       description: "Decimal between 0 and 1, e.g. 0.92. Never a percentage like 92."
     },
-    reason: { type: "string", description: "One short sentence, under 20 words." }
+    reason: {
+      type: "string",
+      description:
+        "One short sentence, under 20 words. Plain text only: no double quotes, no line breaks."
+    }
   },
   required: ["id", "confidence", "reason"]
 } as const;
@@ -48,6 +58,7 @@ type RawResult = {
 };
 
 export async function classifyAgainstTaxonomy(
+  resource: CapturedResource,
   understanding: ResourceUnderstanding,
   taxonomy: Taxonomy,
   hints: CorrectionHint[] = []
@@ -57,7 +68,14 @@ export async function classifyAgainstTaxonomy(
   const output = await requestJson<RawResult>({
     schemaName: "second_brain_classification",
     schema: classificationSchema,
-    prompt: buildPrompt(understanding, taxonomy.areas, activeProjects, taxonomy.topics, hints)
+    prompt: buildPrompt(
+      resource,
+      understanding,
+      taxonomy.areas,
+      activeProjects,
+      taxonomy.topics,
+      hints
+    )
   });
 
   return {
@@ -84,11 +102,17 @@ function normalizeCandidates(
     const name = namesById.get(id);
     if (!name || seen.has(id)) continue;
 
+    const score = toConfidence(confidence);
+    // The prompt asks the model not to return anything this weak, but models
+    // hedge. Enforcing the floor here keeps low-signal noise out of the popup
+    // regardless of how the model behaves.
+    if (score < noiseFloor) continue;
+
     seen.add(id);
     candidates.push({
       id,
       name,
-      confidence: toConfidence(confidence),
+      confidence: score,
       reason: toCleanString(reason, "Matched by the classifier.")
     });
   }
@@ -99,6 +123,7 @@ function normalizeCandidates(
 }
 
 function buildPrompt(
+  resource: CapturedResource,
   understanding: ResourceUnderstanding,
   areas: Area[],
   projects: Project[],
@@ -116,15 +141,34 @@ function buildPrompt(
     "- Areas are broad and stable; usually 1, occasionally 2.",
     "- Only pick a Project when the resource would actually help move that specific work forward.",
     "- Topics may have several genuine matches. Include each one that truly fits.",
-    "- Do not match on a generic shared word alone. The resource must really be about the entity.",
+    "- Keep every reason to one short plain-text sentence. Never put a double quote,",
+    "  an apostrophe-heavy phrase, or a line break inside a reason - it breaks the JSON.",
+    "",
+    "THE OVERLAP TEST - apply to every candidate before including it",
+    "Ask: is this resource ABOUT the entity, or does it merely share a word or a broad field with it?",
+    "Only 'about' qualifies. Some worked examples:",
+    "- A video on animating math visualisations is NOT about 'Content Strategy' just because both involve making content.",
+    "- A video on vector databases is NOT about 'Web Development' just because vector databases get used in web apps.",
+    "- A video on vector databases IS about 'Retrieval' and 'Embeddings' - those are its actual subject.",
+    "If your reason would be 'both relate to X broadly', omit the candidate entirely.",
     "",
     "CONFIDENCE (decimal 0 to 1, never a percentage)",
-    "- 0.90 and above: unambiguous, direct match. This will be auto-selected for the user.",
-    "- 0.70 to 0.89: strong match worth suggesting, but the user decides.",
-    "- Below 0.70: plausible but weak. Include it only if it is genuinely relevant.",
+    "- 0.90 and above: the resource is unmistakably, centrally about this entity. Auto-selected for the user.",
+    "- 0.70 to 0.89: clearly relevant and worth suggesting, but the user decides.",
+    "- Below 0.70: do not return it at all. Weak guesses cost the user more than a missing suggestion.",
     "",
     ...buildHintSection(hints),
-    "RESOURCE",
+    resource.sourceType === "youtube_channel"
+      ? "RESOURCE (a YouTube channel - file it by what it publishes over time, not one video)"
+      : "RESOURCE (a single YouTube video)",
+    // The title and channel are the strongest and most literal signals there
+    // are - far more reliable than a generated summary. Pass 1 deliberately
+    // never saw the taxonomy, so these are re-supplied here rather than being
+    // lost between the two passes.
+    `${resource.sourceType === "youtube_channel" ? "Channel name" : "Title"}: ${resource.title ?? "(unknown)"}`,
+    resource.sourceType === "youtube_channel"
+      ? ""
+      : `Channel: ${resource.creator ?? "(unknown)"}`,
     `Summary: ${understanding.summary}`,
     `Category: ${understanding.contentCategory}`,
     `Core ideas: ${understanding.coreIdeas.join(", ") || "(none identified)"}`,

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canonicalYouTubeUrl, parseYouTubeVideoId } from "../shared/capture/youtube.js";
+import {
+  canonicalYouTubeUrl,
+  cleanYouTubeTitle,
+  parseYouTubeChannelId,
+  parseYouTubeVideoId
+} from "../shared/capture/youtube.js";
 import {
   assertCapturedResource,
   normalizeCapturedResource
@@ -84,7 +89,98 @@ test("rejects a canonical link pointing at a different video", () => {
 
 test("rebuilds canonicalUrl from the verified video id", () => {
   const normalized = normalizeCapturedResource(validResource({ canonicalUrl: null }));
-  assert.equal(normalized.canonicalUrl, canonicalYouTubeUrl(videoId));
+  assert.equal(normalized.canonicalUrl, canonicalYouTubeUrl({ kind: "video", id: videoId }));
+});
+
+// A tab title carries an unread-notification badge and YouTube's own suffix.
+// Neither belongs in Notion.
+test("strips the unread count and the YouTube suffix from a title", () => {
+  assert.equal(
+    cleanYouTubeTitle("(87) The BRUTAL Curriculum That Produced 7 Minds - YouTube"),
+    "The BRUTAL Curriculum That Produced 7 Minds"
+  );
+  assert.equal(cleanYouTubeTitle("(1) Something - YouTube"), "Something");
+  assert.equal(cleanYouTubeTitle("A Clean Title"), "A Clean Title");
+  // A parenthesised number that is part of the real title must survive.
+  assert.equal(cleanYouTubeTitle("Episode 5 (2024) Review"), "Episode 5 (2024) Review");
+  assert.equal(cleanYouTubeTitle("   "), null);
+  assert.equal(cleanYouTubeTitle(null), null);
+});
+
+test("normalizing cleans the stored title", () => {
+  const normalized = normalizeCapturedResource(
+    validResource({ title: "(12) Real Title - YouTube" })
+  );
+  assert.equal(normalized.title, "Real Title");
+});
+
+test("parses channel URLs in all four addressing styles", () => {
+  assert.equal(parseYouTubeChannelId("https://www.youtube.com/@PolyaMath"), "@PolyaMath");
+  assert.equal(
+    parseYouTubeChannelId("https://www.youtube.com/channel/UCXuqSBlHAE6Xw-yeJA0Tunw"),
+    "UCXuqSBlHAE6Xw-yeJA0Tunw"
+  );
+  assert.equal(parseYouTubeChannelId("https://www.youtube.com/c/Vanity"), "Vanity");
+  assert.equal(parseYouTubeChannelId("https://www.youtube.com/user/Legacy"), "Legacy");
+  assert.equal(parseYouTubeChannelId("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), null);
+});
+
+function channelResource(overrides: Record<string, unknown> = {}) {
+  return {
+    ...validResource(),
+    url: "https://www.youtube.com/@PolyaMath",
+    canonicalUrl: null,
+    sourceType: "youtube_channel",
+    sourceId: "@PolyaMath",
+    title: "PolyaMath",
+    ...overrides
+  };
+}
+
+test("accepts a captured channel", () => {
+  assert.doesNotThrow(() => assertCapturedResource(channelResource()));
+});
+
+// A handle and a UC id are both valid identities for the same channel and
+// can't be compared, so this must not be rejected.
+test("accepts a channel whose id is a UC id while the URL uses a handle", () => {
+  assert.doesNotThrow(() =>
+    assertCapturedResource(channelResource({ sourceId: "UCXuqSBlHAE6Xw-yeJA0Tunw" }))
+  );
+});
+
+// The real-world failure: YouTube is a single-page app, so ytInitialData can
+// still describe the previous channel after navigating to a new one.
+test("rejects one channel's metadata captured under another channel's URL", () => {
+  assert.throws(
+    () =>
+      assertCapturedResource(
+        channelResource({ url: "https://www.youtube.com/@Newsthink", sourceId: "@PolyaMath" })
+      ),
+    (error: AppError) => error.code === "PAGE_IDENTITY_MISMATCH"
+  );
+});
+
+test("matches channel handles case-insensitively", () => {
+  assert.doesNotThrow(() =>
+    assertCapturedResource(
+      channelResource({ url: "https://www.youtube.com/@polyamath", sourceId: "@PolyaMath" })
+    )
+  );
+});
+
+// A channel URL with video metadata (or the reverse) means the capture raced
+// a navigation.
+test("rejects a channel URL captured as a video", () => {
+  assert.throws(
+    () =>
+      assertCapturedResource({
+        ...validResource(),
+        url: "https://www.youtube.com/@PolyaMath",
+        sourceType: "youtube_video"
+      }),
+    (error: AppError) => error.code === "PAGE_IDENTITY_MISMATCH"
+  );
 });
 
 test("normalizes blank optional fields to null", () => {

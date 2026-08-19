@@ -19,7 +19,8 @@ const understandingSchema = {
   properties: {
     summary: {
       type: "string",
-      description: "Two or three sentences describing what this video covers."
+      description:
+        "Two or three sentences, roughly 40 to 60 words. Enough to reconstruct what this covers months later without reopening it."
     },
     coreIdeas: {
       type: "array",
@@ -58,16 +59,27 @@ export async function understandResource(
 }
 
 function buildPrompt(resource: CapturedResource): string {
+  const isChannel = resource.sourceType === "youtube_channel";
+  const noun = isChannel ? "YouTube channel" : "YouTube video";
+
   return [
-    "You are describing a YouTube video so it can be filed into a personal knowledge base.",
-    "Describe only what the video is about. Do not suggest where it should be filed.",
-    "Base your answer on the title, channel, and description below.",
-    "If the description is thin, infer conservatively from the title and channel, and keep the summary short rather than inventing specifics.",
+    `You are describing a ${noun} so it can be filed into a personal knowledge base.`,
+    `Describe only what the ${isChannel ? "channel publishes" : "video is about"}. Do not suggest where it should be filed.`,
+    "Base your answer on the title, name, and description below.",
+    "If the description is thin, infer conservatively from the title and name, and keep the summary short rather than inventing specifics.",
     "Never invent facts, statistics, or claims that are not supported by the text provided.",
     "",
-    "VIDEO",
-    `Title: ${resource.title ?? "(unknown)"}`,
-    `Channel: ${resource.creator ?? "(unknown)"}`,
+    "The summary is two or three sentences, roughly 40 to 60 words. It should let",
+    "someone skim it months from now and know what this covers and whether to reopen it.",
+    "Name the specific subjects covered rather than describing them in the abstract.",
+    `Skip filler like "this ${isChannel ? "channel" : "video"} is about" - start with the substance.`,
+    isChannel
+      ? "coreIdeas should be the recurring subjects the channel covers, not one video's topics."
+      : "coreIdeas should be the concepts the video actually teaches or argues.",
+    "",
+    isChannel ? "CHANNEL" : "VIDEO",
+    `${isChannel ? "Name" : "Title"}: ${resource.title ?? "(unknown)"}`,
+    isChannel ? "" : `Channel: ${resource.creator ?? "(unknown)"}`,
     resource.publishedAt ? `Published: ${resource.publishedAt}` : "",
     "",
     "Description:",

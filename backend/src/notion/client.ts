@@ -23,6 +23,13 @@ type NotionCreatePageResponse = {
   url: string;
 };
 
+function isMissingTemplateError(error: unknown): boolean {
+  return (
+    error instanceof AppError &&
+    /no default template is configured/i.test(String(error.cause ?? error.message))
+  );
+}
+
 export class NotionClient {
   constructor(private readonly config: NotionTaxonomyConfig) {}
 
@@ -71,19 +78,39 @@ export class NotionClient {
   async createPageInDataSource(
     dataSourceId: string,
     properties: Record<string, unknown>,
-    options: { useDefaultTemplate?: boolean } = {}
+    options: { useDefaultTemplate?: boolean; children?: Record<string, unknown>[] } = {}
   ): Promise<NotionCreatePageResponse> {
-    return this.request<NotionCreatePageResponse>("/v1/pages", {
-      method: "POST",
-      body: JSON.stringify({
-        parent: {
-          type: "data_source_id",
-          data_source_id: dataSourceId
-        },
-        properties,
-        template: options.useDefaultTemplate ? { type: "default" } : { type: "none" }
-      })
-    });
+    const create = (useTemplate: boolean) =>
+      this.request<NotionCreatePageResponse>("/v1/pages", {
+        method: "POST",
+        body: JSON.stringify({
+          parent: {
+            type: "data_source_id",
+            data_source_id: dataSourceId
+          },
+          properties,
+          // Omit `children` entirely when there is nothing to add - an empty
+          // array is not the same as absent to every Notion endpoint.
+          ...(options.children?.length ? { children: options.children } : {}),
+          template: useTemplate ? { type: "default" } : { type: "none" }
+        })
+      });
+
+    if (!options.useDefaultTemplate) {
+      return create(false);
+    }
+
+    try {
+      return await create(true);
+    } catch (error) {
+      // Asking for a default template on a database that has none is a hard
+      // 400. A missing template should not cost the user their save, so fall
+      // back to a plain page - the properties are identical either way.
+      if (isMissingTemplateError(error)) {
+        return create(false);
+      }
+      throw error;
+    }
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {

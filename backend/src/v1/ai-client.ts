@@ -36,12 +36,26 @@ export async function requestJson<T>(request: JsonModelRequest): Promise<T> {
     );
   }
 
-  const raw =
-    config.provider === "openrouter"
-      ? await callOpenRouter(config, request)
-      : await callOpenAiResponses(config, request);
+  // Even under a strict JSON schema, models occasionally emit invalid JSON -
+  // typically an unescaped quote or a raw newline inside a string. It's
+  // stochastic, so the same request usually succeeds on a second attempt.
+  // Retrying here is far cheaper than failing the whole analyze.
+  let lastError: unknown;
 
-  return parseJson<T>(raw, request.schemaName);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const raw =
+      config.provider === "openrouter"
+        ? await callOpenRouter(config, request)
+        : await callOpenAiResponses(config, request);
+
+    try {
+      return parseJson<T>(raw, request.schemaName);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 async function callOpenAiResponses(config: AiConfig, request: JsonModelRequest): Promise<string> {
@@ -131,15 +145,34 @@ async function callOpenRouter(config: AiConfig, request: JsonModelRequest): Prom
 }
 
 function parseJson<T>(raw: string, schemaName: string): T {
-  try {
-    return JSON.parse(raw) as T;
-  } catch (error) {
-    throw new AppError(
-      "AI_INVALID_OUTPUT",
-      `The model returned invalid JSON for ${schemaName}.`,
-      error
-    );
+  for (const candidate of [raw, stripCodeFence(raw), extractOutermostObject(raw)]) {
+    if (!candidate) continue;
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      // Try the next repair strategy.
+    }
   }
+
+  // Include what the model actually said. Without it, a malformed response is
+  // undebuggable - the position in a JSON error means nothing on its own.
+  throw new AppError(
+    "AI_INVALID_OUTPUT",
+    `The model returned invalid JSON for ${schemaName}. Raw output: ${raw.slice(0, 300)}`
+  );
+}
+
+// Some models wrap JSON in a markdown fence despite being asked for raw JSON.
+function stripCodeFence(raw: string): string | undefined {
+  const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  return match?.[1];
+}
+
+// Salvages the object when the model adds prose before or after it.
+function extractOutermostObject(raw: string): string | undefined {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  return start >= 0 && end > start ? raw.slice(start, end + 1) : undefined;
 }
 
 // Some models return a 0-1 probability, some return 0-100, regardless of what

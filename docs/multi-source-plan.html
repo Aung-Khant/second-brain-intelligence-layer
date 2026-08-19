@@ -1,0 +1,822 @@
+<meta charset="utf-8" />
+<title>Beyond YouTube</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+/>
+
+<style>
+  :root {
+    --ground: #f4f6f5;
+    --surface: #ffffff;
+    --sunken: #eceff0;
+    --ink: #10161a;
+    --muted: #59666c;
+    --faint: #8a969b;
+    --line: rgba(16, 22, 26, 0.11);
+    --facts: #1f6f63;
+    --meaning: #a85a2a;
+    --intent: #2c4c86;
+    --facts-soft: rgba(31, 111, 99, 0.1);
+    --meaning-soft: rgba(168, 90, 42, 0.1);
+    --intent-soft: rgba(44, 76, 134, 0.1);
+    --display: "Newsreader", ui-serif, Georgia, serif;
+    --body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0d1214;
+      --surface: #141b1e;
+      --sunken: #101719;
+      --ink: #e7ecea;
+      --muted: #9aa8ad;
+      --faint: #6d7c82;
+      --line: rgba(231, 236, 234, 0.12);
+      --facts: #5cbfae;
+      --meaning: #e0955e;
+      --intent: #7ba3dd;
+      --facts-soft: rgba(92, 191, 174, 0.14);
+      --meaning-soft: rgba(224, 149, 94, 0.14);
+      --intent-soft: rgba(123, 163, 221, 0.14);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0d1214;
+    --surface: #141b1e;
+    --sunken: #101719;
+    --ink: #e7ecea;
+    --muted: #9aa8ad;
+    --faint: #6d7c82;
+    --line: rgba(231, 236, 234, 0.12);
+    --facts: #5cbfae;
+    --meaning: #e0955e;
+    --intent: #7ba3dd;
+    --facts-soft: rgba(92, 191, 174, 0.14);
+    --meaning-soft: rgba(224, 149, 94, 0.14);
+    --intent-soft: rgba(123, 163, 221, 0.14);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 28px 72px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  header.top {
+    padding: 46px 0 26px;
+  }
+
+  header.top h1 {
+    font-size: clamp(34px, 5.4vw, 52px);
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin: 10px 0 18px;
+  }
+
+  header.top p {
+    color: var(--muted);
+    max-width: 62ch;
+  }
+
+  section {
+    padding: 40px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .head h2 {
+    font-size: clamp(23px, 3vw, 30px);
+    letter-spacing: -0.015em;
+  }
+
+  .head p {
+    color: var(--muted);
+    max-width: 66ch;
+  }
+
+  .prose p + p {
+    margin-top: 12px;
+  }
+
+  .prose {
+    max-width: 66ch;
+  }
+
+  /* phases */
+  .phases {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .phase {
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 20px;
+    padding: 18px 20px;
+  }
+
+  .phase__no {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding-top: 4px;
+  }
+
+  .phase h3 {
+    font-family: var(--body);
+    font-size: 15.5px;
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+
+  .phase p {
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  .phase ul {
+    margin: 9px 0 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .phase li {
+    margin-bottom: 3px;
+  }
+
+  /* source cards */
+  .sources {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .source {
+    background: var(--surface);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .source__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .source h3 {
+    font-family: var(--body);
+    font-size: 15.5px;
+    font-weight: 600;
+  }
+
+  .pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+
+  .pill--easy {
+    color: var(--facts);
+    background: var(--facts-soft);
+  }
+
+  .pill--medium {
+    color: var(--intent);
+    background: var(--intent-soft);
+  }
+
+  .pill--hard {
+    color: var(--meaning);
+    background: var(--meaning-soft);
+  }
+
+  .kv {
+    display: grid;
+    grid-template-columns: 78px 1fr;
+    gap: 4px 12px;
+    font-size: 13.5px;
+  }
+
+  .kv dt {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding-top: 3px;
+  }
+
+  .kv dd {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  /* tables */
+  .tablewrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    font-size: 14px;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-weight: 500;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  td:first-child {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  /* decisions */
+  .decisions {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .decision {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--meaning);
+    border-radius: 3px;
+    padding: 16px 18px;
+  }
+
+  .decision h3 {
+    font-family: var(--body);
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+
+  .decision p {
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  .decision .rec {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .decision .rec strong {
+    font-weight: 600;
+  }
+
+  /* risks */
+  .risks {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 70ch;
+  }
+
+  .risk h3 {
+    font-family: var(--body);
+    font-size: 14.5px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  .risk p {
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  .tree {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.8;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    color: var(--muted);
+  }
+
+  .tree b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .tree .new {
+    color: var(--facts);
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 26px;
+    color: var(--faint);
+    font-size: 13.5px;
+  }
+
+  @media (max-width: 620px) {
+    .phase {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .kv {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="label">Implementation plan &middot; codex/multi-source-capture</span>
+    <h1>Beyond YouTube</h1>
+    <p>
+      Four new resource types &mdash; websites, articles, GitHub repositories, and research
+      papers &mdash; added without disturbing the pipeline that already works. The order below
+      is chosen so each phase ships something usable and the riskiest work happens once the
+      shape is proven.
+    </p>
+  </header>
+
+  <section>
+    <div class="head">
+      <span class="label">The shape of the change</span>
+      <h2>One seam, four adapters</h2>
+      <p>
+        Everything downstream of capture is already source-agnostic. Both AI passes, the
+        confidence bands, the taxonomy matching, the correction log, and duplicate detection
+        care about a title, a description, and some text &mdash; not about YouTube.
+      </p>
+    </div>
+
+    <div class="prose">
+      <p>
+        The YouTube assumptions are concentrated in five places, and only these five need to
+        change: the <code>sourceType</code> union, the validation gate, the extractor in the
+        popup, the Notion <code>Type</code> map, and the nouns in the pass&nbsp;1 prompt.
+      </p>
+      <p>
+        So the work is not four features. It is one refactor that turns capture into a
+        registry of adapters, then four adapters written against that interface. Each adapter
+        answers the same four questions: does this URL belong to me, how do I read this page,
+        is what I read really this page, and what Notion Type is it.
+      </p>
+    </div>
+
+    <div class="tree" style="margin-top: 22px">
+      shared/capture/<br />
+      &nbsp;&nbsp;<b>source.ts</b> <span class="new">&larr; new: detect(url), the adapter registry</span><br />
+      &nbsp;&nbsp;<b>youtube.ts</b> &nbsp;existing, unchanged behaviour<br />
+      &nbsp;&nbsp;<b>github.ts</b> &nbsp;<span class="new">new</span><br />
+      &nbsp;&nbsp;<b>paper.ts</b> &nbsp;&nbsp;<span class="new">new &middot; citation_* meta, arXiv, DOI</span><br />
+      &nbsp;&nbsp;<b>webpage.ts</b> <span class="new">new &middot; article vs website decided here</span><br />
+      extension/<br />
+      &nbsp;&nbsp;<b>extractors.js</b> <span class="new">new &middot; one in-page function per type</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="label">The four types</span>
+      <h2>What each one actually needs</h2>
+      <p>
+        They differ far more than the request implies. Two are nearly free, one is mostly
+        prompt work, and one carries almost all the risk in this project.
+      </p>
+    </div>
+
+    <div class="sources">
+      <div class="source">
+        <div class="source__top">
+          <h3>GitHub repositories</h3>
+          <span class="pill pill--easy">Easiest</span>
+        </div>
+        <p style="color: var(--muted); font-size: 14px">
+          The only type with a real API. No scraping at all: the backend calls
+          <code>api.github.com/repos/{owner}/{repo}</code> and gets a description, topic tags,
+          primary language, and star count as clean structured data.
+        </p>
+        <dl class="kv">
+          <dt>Detect</dt>
+          <dd><code>github.com/{owner}/{repo}</code>, excluding reserved paths</dd>
+          <dt>Extract</dt>
+          <dd>Backend fetch. README as pageText if the description is thin.</dd>
+          <dt>Identity</dt>
+          <dd>Strong. The API echoes <code>full_name</code>; compare with the URL.</dd>
+          <dt>Risk</dt>
+          <dd>Rate limit of 60/hour unauthenticated. Fine for one person.</dd>
+        </dl>
+      </div>
+
+      <div class="source">
+        <div class="source__top">
+          <h3>Research papers</h3>
+          <span class="pill pill--medium">Moderate</span>
+        </div>
+        <p style="color: var(--muted); font-size: 14px">
+          Academic publishers almost universally emit Highwire Press meta tags &mdash;
+          <code>citation_title</code>, <code>citation_author</code>,
+          <code>citation_abstract</code>, <code>citation_doi</code>. Where present, extraction
+          is deterministic and excellent: the abstract is a better summary input than anything
+          on a normal web page.
+        </p>
+        <dl class="kv">
+          <dt>Detect</dt>
+          <dd>Host list (arXiv, DOI, PubMed, bioRxiv, ACM, IEEE, SSRN) plus a meta-tag probe</dd>
+          <dt>Extract</dt>
+          <dd>In-page meta tags; abstract becomes the description</dd>
+          <dt>Identity</dt>
+          <dd>DOI or arXiv ID, compared against the URL</dd>
+          <dt>Risk</dt>
+          <dd>PDF URLs have no DOM. Rewrite arXiv <code>/pdf/</code> to <code>/abs/</code>.</dd>
+        </dl>
+      </div>
+
+      <div class="source">
+        <div class="source__top">
+          <h3>Articles &amp; blog posts</h3>
+          <span class="pill pill--hard">Hardest</span>
+        </div>
+        <p style="color: var(--muted); font-size: 14px">
+          The risk lives here. Classification quality depends on real body text, and getting
+          clean body text out of an arbitrary page is a genuinely hard problem &mdash; the one
+          part of this plan most likely to be underestimated.
+        </p>
+        <dl class="kv">
+          <dt>Detect</dt>
+          <dd>Page signals, not URL: <code>&lt;article&gt;</code>, <code>og:type</code>, JSON-LD, a byline</dd>
+          <dt>Extract</dt>
+          <dd>Densest text container, nav/aside/footer stripped, capped</dd>
+          <dt>Identity</dt>
+          <dd>Weak. Canonical URL comparison only.</dd>
+          <dt>Risk</dt>
+          <dd>Paywalls, cookie walls, JS-rendered bodies, comment sections</dd>
+        </dl>
+      </div>
+
+      <div class="source">
+        <div class="source__top">
+          <h3>General websites</h3>
+          <span class="pill pill--easy">Easy</span>
+        </div>
+        <p style="color: var(--muted); font-size: 14px">
+          Deliberately the fallback: anything that isn't one of the others. Tools, docs, product
+          pages, landing pages. Expectations should be lower &mdash; title, description, and
+          whatever text is there.
+        </p>
+        <dl class="kv">
+          <dt>Detect</dt>
+          <dd>Any http/https page no other adapter claims</dd>
+          <dt>Extract</dt>
+          <dd>Shared with articles; same code, lower expectations</dd>
+          <dt>Identity</dt>
+          <dd>Canonical URL comparison</dd>
+          <dt>Risk</dt>
+          <dd>Low. Thin metadata yields a thin summary, which is honest.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="label">Sequence</span>
+      <h2>Four phases, each shippable</h2>
+      <p>
+        The refactor lands first with no behaviour change at all, so any regression it causes
+        is visible immediately against the existing tests rather than tangled up with a new
+        source type.
+      </p>
+    </div>
+
+    <div class="phases">
+      <div class="phase">
+        <span class="phase__no">Phase 0</span>
+        <div>
+          <h3>The seam &mdash; no new types, no behaviour change</h3>
+          <p>
+            Turn the YouTube-shaped path into a registry. All 64 tests must still pass
+            untouched; that is the entire success criterion.
+          </p>
+          <ul>
+            <li>Widen <code>sourceType</code>, add <code>shared/capture/source.ts</code></li>
+            <li>Split validation into shared checks plus a per-adapter identity check</li>
+            <li>Replace the popup's <code>parseYouTubeTarget</code> gate with <code>detectSource</code></li>
+            <li>Parameterise the pass&nbsp;1 nouns instead of hardcoding video/channel</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <span class="phase__no">Phase 1</span>
+        <div>
+          <h3>GitHub repositories</h3>
+          <p>
+            Proves the seam against a genuinely different shape &mdash; data fetched by the
+            backend rather than read from the page &mdash; while being the least risky of the
+            four.
+          </p>
+          <ul>
+            <li>Backend fetch with a short timeout and a clear failure message</li>
+            <li>Topic tags map unusually well onto Notion Topics</li>
+            <li>Falls back to page extraction if the API is unreachable</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <span class="phase__no">Phase 2</span>
+        <div>
+          <h3>Websites and articles</h3>
+          <p>
+            One extractor serving both, with the article/website decision made from page
+            signals at capture time &mdash; a fact about the page, so code decides it, not the
+            model.
+          </p>
+          <ul>
+            <li>Start with a compact heuristic extractor, roughly 60 lines</li>
+            <li>Keep it behind an interface so Readability can replace it later</li>
+            <li>Populate <code>pageText</code>, which has been null since day one</li>
+            <li>Cap extracted text before it reaches the prompt</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <span class="phase__no">Phase 3</span>
+        <div>
+          <h3>Research papers</h3>
+          <p>
+            Last because it is the narrowest, and because by then the webpage adapter exists as
+            a fallback for any publisher that doesn't emit citation tags.
+          </p>
+          <ul>
+            <li>Highwire <code>citation_*</code> tags, then JSON-LD, then the webpage fallback</li>
+            <li>arXiv PDF URLs rewritten to their abstract page</li>
+            <li>Authors become the creator; the abstract becomes the description</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="label">Blocked on you</span>
+      <h2>Three decisions I should not make alone</h2>
+    </div>
+
+    <div class="decisions">
+      <div class="decision">
+        <h3>Your Notion Type options don't cover this</h3>
+        <p>
+          The <code>Type</code> select currently offers Article, Video, YouTube Channel,
+          Website, and PDF. GitHub repositories and research papers have nothing to map onto,
+          and writing a value that doesn't exist is the same hard 400 that broke Save twice
+          already.
+        </p>
+        <p class="rec">
+          <strong>Recommended:</strong> add <code>Code Repository</code> and
+          <code>Research Paper</code> as options in Notion. The alternative &mdash; folding
+          them into Website and PDF &mdash; costs you the ability to filter on them later.
+        </p>
+      </div>
+
+      <div class="decision">
+        <h3>How hard should article extraction try?</h3>
+        <p>
+          A compact heuristic extractor is quick and handles most blogs. Vendoring Mozilla's
+          Readability handles far more of the long tail but adds roughly 100&nbsp;KB to the
+          extension and a dependency to keep current.
+        </p>
+        <p class="rec">
+          <strong>Recommended:</strong> heuristic first, behind an interface. Swap in
+          Readability only if real use shows it is needed &mdash; and by then you will know
+          which pages fail.
+        </p>
+      </div>
+
+      <div class="decision">
+        <h3>Identity checking gets weaker, and that is a real loss</h3>
+        <p>
+          For YouTube, capture is proven correct by comparing video IDs &mdash; that is what
+          stops one video's metadata being saved under another's URL. A general web page has no
+          such ID, so the strongest available check is comparing the canonical URL.
+        </p>
+        <p class="rec">
+          <strong>Recommended:</strong> accept the weaker check for web pages, and keep the
+          strict one for every type that has a real ID &mdash; YouTube, GitHub, DOI, arXiv.
+          Worth knowing rather than discovering later.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="label">What changes where</span>
+      <h2>Files this touches</h2>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">File</th>
+            <th scope="col">Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>shared/types/captured-resource.ts</td>
+            <td>Widen the <code>sourceType</code> union to six values</td>
+          </tr>
+          <tr>
+            <td>shared/capture/source.ts</td>
+            <td>New. URL &rarr; adapter, with a defined precedence order</td>
+          </tr>
+          <tr>
+            <td>shared/schemas/captured-resource.ts</td>
+            <td>Shared validation, plus a per-adapter identity check</td>
+          </tr>
+          <tr>
+            <td>backend/src/v1/understand.ts</td>
+            <td>Per-type nouns and emphasis; feed <code>pageText</code> at last</td>
+          </tr>
+          <tr>
+            <td>backend/src/v1/save.ts</td>
+            <td>Extend the Notion <code>Type</code> map to six entries</td>
+          </tr>
+          <tr>
+            <td>backend/src/v1/enrich-github.ts</td>
+            <td>New. The only adapter needing a network call</td>
+          </tr>
+          <tr>
+            <td>extension/extractors.js</td>
+            <td>New. One self-contained in-page function per type</td>
+          </tr>
+          <tr>
+            <td>extension/popup.js</td>
+            <td>Route on detected type; relabel "creator" per source</td>
+          </tr>
+          <tr>
+            <td>extension/manifest.json</td>
+            <td>Description only &mdash; no new permissions needed</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="color: var(--muted); font-size: 14.5px; margin-top: 16px; max-width: 66ch">
+      Notably absent: <code>classify.ts</code>, <code>corrections.ts</code>, the confidence
+      bands, and the whole picker UI. If any of those need changing, the seam is in the wrong
+      place and it is worth stopping to reconsider.
+    </p>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="label">Known risks</span>
+      <h2>What could go wrong</h2>
+    </div>
+
+    <div class="risks">
+      <div class="risk">
+        <h3>Body-text quality decides classification quality</h3>
+        <p>
+          Every downstream improvement rests on pass&nbsp;1 receiving something worth reading.
+          A page whose extraction yields navigation chrome produces a confident, useless
+          summary &mdash; and the confidence bands will not catch it, because the model is not
+          uncertain, just wrong.
+        </p>
+      </div>
+      <div class="risk">
+        <h3>The taxonomy still has no descriptions</h3>
+        <p>
+          Adding four source types multiplies the volume of things being classified against
+          Areas and Topics that are bare names. This gets worse with scale, not better, and no
+          amount of prompt work substitutes for one line of description per entity.
+        </p>
+      </div>
+      <div class="risk">
+        <h3>Pages behind a login or paywall</h3>
+        <p>
+          In-page extraction sees exactly what you see, which is the right call &mdash; but it
+          means what gets saved depends on your session, and the same URL can capture
+          differently for someone else.
+        </p>
+      </div>
+      <div class="risk">
+        <h3>Browser-rendered PDFs have no DOM</h3>
+        <p>
+          A PDF open in Chrome's viewer cannot be scraped at all. arXiv can be handled by
+          rewriting to the abstract page; a bare PDF elsewhere will have to save as URL and
+          title alone, and should say so rather than pretending.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Branch <code>codex/multi-source-capture</code>, cut from <code>d7b5242</code> with 64 tests
+    passing. Nothing implemented yet.
+  </footer>
+</div>

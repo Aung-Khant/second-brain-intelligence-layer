@@ -75,6 +75,10 @@ export type SelectionState = "auto_selected" | "suggested" | "unselected";
 export type CorrectionAction = "accepted" | "rejected" | "manually_added";
 
 export type CorrectionRecord = {
+  // Which Notion connection produced this. Corrections are personal
+  // judgements about one workspace's taxonomy, so they are never read across
+  // connections.
+  connectionId: string;
   resourceId: string;
   resourceUrl: string;
   entityType: EntityType;

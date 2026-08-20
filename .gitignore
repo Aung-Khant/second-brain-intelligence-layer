@@ -5,3 +5,6 @@ dist/
 .DS_Store
 classification-logs/
 correction-logs/
+
+data/
+correction-logs/

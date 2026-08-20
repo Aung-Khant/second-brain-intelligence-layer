@@ -3,9 +3,10 @@
 // NOTION_API_KEY and the data source IDs in .env are wired up correctly.
 import { loadDotEnv } from "../config/env.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
+import { readNotionTaxonomyConfig } from "../notion/config.js";
 
 loadDotEnv();
 
-const taxonomy = await fetchNotionTaxonomy();
+const taxonomy = await fetchNotionTaxonomy(readNotionTaxonomyConfig());
 process.stdout.write(`${JSON.stringify(taxonomy, null, 2)}\n`);
 

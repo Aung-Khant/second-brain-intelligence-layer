@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { classifyResource } from "../ai/classify-resource.js";
 import { loadDotEnv } from "../config/env.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
+import { readNotionTaxonomyConfig } from "../notion/config.js";
 import { mockTaxonomy } from "../retrieval/mock-taxonomy.js";
 import { assertTaxonomy } from "../../../shared/schemas/validation.js";
 import type { ResourceType } from "../../../shared/types/resource.js";
@@ -94,7 +95,7 @@ function compareRelationshipSet(expected: string[], actual: string[]) {
 async function readEvaluationTaxonomy(): Promise<Taxonomy> {
   if (process.argv.includes("--notion")) {
     loadDotEnv();
-    return fetchNotionTaxonomy();
+    return fetchNotionTaxonomy(readNotionTaxonomyConfig());
   }
 
   const taxonomyPath = join(process.cwd(), "tests", "fixtures", "evaluation-taxonomy.json");

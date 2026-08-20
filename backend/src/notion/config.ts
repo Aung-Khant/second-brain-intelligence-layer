@@ -1,9 +1,20 @@
-// Reads NOTION_API_KEY and the four data source IDs from env, falling back
-// to this repo's own default data source IDs when the corresponding env var
-// isn't set. Note the env var names are NOTION_*_DATA_SOURCE_ID - a
-// differently-named var (e.g. NOTION_*_DATABASE_ID) is silently ignored and
-// the default ID is used instead, since only these exact names are read.
+// Where a Notion request gets its credentials and its four data source ids.
+//
+// There are two sources, and the difference is the whole point of multi-user:
+//
+//   configForConnection()  the normal path. Token and ids come from the
+//                          connection the caller's session resolved to, so two
+//                          people using the same server touch entirely
+//                          different workspaces.
+//
+//   readNotionTaxonomyConfig()  a single-user fallback for local development,
+//                          reading NOTION_API_KEY and the NOTION_*_DATA_SOURCE_ID
+//                          vars. It is the pre-OAuth setup, kept working on
+//                          purpose so an existing .env keeps running, but it
+//                          is nobody's production path - it can only ever
+//                          describe one workspace.
 import { AppError } from "../../../shared/types/errors.js";
+import { accessTokenFor, type NotionConnection } from "../auth/connections.js";
 
 export type NotionTaxonomyConfig = {
   apiKey: string;
@@ -12,23 +23,46 @@ export type NotionTaxonomyConfig = {
   topicsDataSourceId: string;
   projectsDataSourceId: string;
   resourcesDataSourceId: string;
+  // Identifies whose workspace this is, so caches and correction records can
+  // be kept apart. "local" for the env fallback.
+  connectionId: string;
 };
 
-const defaultDataSourceIds = {
-  areas: "048d5cf2-323d-8307-a7e6-8795bc75196a",
-  topics: "4c1d5cf2-323d-820e-bed5-87a0b774f147",
-  projects: "3e1d5cf2-323d-8299-9af5-8703a17b96c7",
-  resources: "ab7d5cf2-323d-8350-abec-07da57d306af"
-} as const;
+export function notionVersion(): string {
+  return process.env.NOTION_VERSION || "2026-03-11";
+}
+
+export async function configForConnection(
+  connection: NotionConnection
+): Promise<NotionTaxonomyConfig> {
+  if (!connection.roles) {
+    throw new AppError(
+      "NOTION_AUTH_FAILED",
+      "Finish choosing your Areas, Projects, Topics, and Resources databases."
+    );
+  }
+
+  return {
+    apiKey: await accessTokenFor(connection.id),
+    notionVersion: notionVersion(),
+    connectionId: connection.id,
+    ...connection.roles
+  };
+}
+
+export function hasLocalEnvConfig(): boolean {
+  return Boolean(process.env.NOTION_API_KEY?.trim());
+}
 
 export function readNotionTaxonomyConfig(): NotionTaxonomyConfig {
   return {
     apiKey: requireEnv("NOTION_API_KEY"),
-    notionVersion: process.env.NOTION_VERSION || "2026-03-11",
-    areasDataSourceId: process.env.NOTION_AREAS_DATA_SOURCE_ID || defaultDataSourceIds.areas,
-    topicsDataSourceId: process.env.NOTION_TOPICS_DATA_SOURCE_ID || defaultDataSourceIds.topics,
-    projectsDataSourceId: process.env.NOTION_PROJECTS_DATA_SOURCE_ID || defaultDataSourceIds.projects,
-    resourcesDataSourceId: process.env.NOTION_RESOURCES_DATA_SOURCE_ID || defaultDataSourceIds.resources
+    notionVersion: notionVersion(),
+    connectionId: "local",
+    areasDataSourceId: requireEnv("NOTION_AREAS_DATA_SOURCE_ID"),
+    topicsDataSourceId: requireEnv("NOTION_TOPICS_DATA_SOURCE_ID"),
+    projectsDataSourceId: requireEnv("NOTION_PROJECTS_DATA_SOURCE_ID"),
+    resourcesDataSourceId: requireEnv("NOTION_RESOURCES_DATA_SOURCE_ID")
   };
 }
 

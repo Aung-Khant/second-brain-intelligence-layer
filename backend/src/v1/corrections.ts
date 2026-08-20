@@ -31,6 +31,7 @@ const logDirectory = "correction-logs";
 const logFileName = "corrections.jsonl";
 
 export function buildCorrectionRecords(input: {
+  connectionId: string;
   resourceId: string;
   resourceUrl: string;
   classification: ClassificationResult;
@@ -57,6 +58,7 @@ export function buildCorrectionRecords(input: {
     for (const candidate of candidates) {
       const userAccepted = selected.has(candidate.id);
       records.push({
+        connectionId: input.connectionId,
         resourceId: input.resourceId,
         resourceUrl: input.resourceUrl,
         entityType,
@@ -73,6 +75,7 @@ export function buildCorrectionRecords(input: {
     for (const entityId of selectedIds) {
       if (candidatesById.has(entityId)) continue;
       records.push({
+        connectionId: input.connectionId,
         resourceId: input.resourceId,
         resourceUrl: input.resourceUrl,
         entityType,
@@ -103,11 +106,17 @@ export async function appendCorrectionRecords(records: CorrectionRecord[]): Prom
 // Step 9's interface. Deliberately keyword-based: the point right now is that
 // classify.ts has somewhere real to call, not that the ranking is good. Swap
 // the body for embedding search later without touching the classifier.
+// Corrections are scoped to one connection. Feeding one person's history into
+// another person's classifier would leak how they think about their own
+// workspace, and would make the suggestions worse besides - these are
+// judgements about a specific taxonomy, not general knowledge.
 export async function retrieveRelevantCorrections(
   understanding: ResourceUnderstanding,
+  connectionId: string,
   limit = 5
 ): Promise<CorrectionHint[]> {
-  const records = await readCorrectionRecords();
+  const all = await readCorrectionRecords();
+  const records = all.filter((record) => record.connectionId === connectionId);
   if (records.length === 0) return [];
 
   const terms = new Set(

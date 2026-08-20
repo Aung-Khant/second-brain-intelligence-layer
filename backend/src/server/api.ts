@@ -14,6 +14,7 @@ import { createAreaInNotion } from "../notion/save-area.js";
 import { createTopicInNotion } from "../notion/save-topic.js";
 import { createProjectInNotion } from "../notion/save-project.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
+import { readNotionTaxonomyConfig } from "../notion/config.js";
 import { assertConfirmedResource } from "../../../shared/schemas/save-validation.js";
 import { assertTrustedResourceInput } from "../../../shared/schemas/validation.js";
 import type {
@@ -98,7 +99,7 @@ export async function classifyWithNotionTaxonomy(
 ): Promise<ClassifyApiResponse> {
   assertTrustedResourceInput(input.resource);
 
-  const taxonomy = await fetchNotionTaxonomy();
+  const taxonomy = await fetchNotionTaxonomy(readNotionTaxonomyConfig());
   return {
     resource: input.resource,
     classification: classifyLocal(input.resource, taxonomy)
@@ -110,7 +111,7 @@ export async function enhanceClassificationWithAi(
 ): Promise<EnhanceApiResponse> {
   assertTrustedResourceInput(input.resource);
 
-  const taxonomy = await fetchNotionTaxonomy();
+  const taxonomy = await fetchNotionTaxonomy(readNotionTaxonomyConfig());
   if (shouldUseAi()) {
     try {
       const localClassification = classifyLocal(input.resource, taxonomy);
@@ -144,7 +145,7 @@ export async function enhanceClassificationWithAi(
 
 export async function readTaxonomyForPicker(): Promise<TaxonomyApiResponse> {
   return {
-    taxonomy: await fetchNotionTaxonomy()
+    taxonomy: await fetchNotionTaxonomy(readNotionTaxonomyConfig())
   };
 }
 

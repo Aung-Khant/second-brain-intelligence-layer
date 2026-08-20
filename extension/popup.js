@@ -18,6 +18,7 @@
 const apiBaseUrl = "http://127.0.0.1:3737";
 
 const state = {
+  sessionToken: undefined,
   resource: null,
   understanding: null,
   classification: null,
@@ -36,7 +37,8 @@ const elements = {
   results: document.getElementById("results"),
   whySaved: document.getElementById("why-saved"),
   whyRequired: document.querySelector(".why__required"),
-  save: document.getElementById("save")
+  save: document.getElementById("save"),
+  connect: document.getElementById("connect")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -78,8 +80,104 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function start() {
+  state.sessionToken = await readSessionToken();
+
+  let status;
+  try {
+    status = await getJson("/api/auth/status");
+  } catch (error) {
+    showStatus(error.message, true);
+    return;
+  }
+
+  // localFallback is the single-user .env path, kept working for local
+  // development. Anyone else has to connect their own workspace.
+  if (!status.connected && !status.localFallback) {
+    showConnect(status);
+    return;
+  }
+
+  if (status.needsDatabaseSetup) {
+    showStatus("Finish choosing your databases to start saving.", true);
+    elements.connect.hidden = false;
+    elements.connect.textContent = "Choose databases";
+    elements.connect.onclick = () => openSetup();
+    return;
+  }
+
   const captured = await capture();
   if (captured) await analyze();
+}
+
+function showConnect(status) {
+  elements.connect.hidden = false;
+  elements.connect.textContent = "Connect Notion";
+  elements.connect.onclick = connectNotion;
+
+  showStatus(
+    status.oauthAvailable
+      ? "Connect your Notion workspace to start saving."
+      : "This server has no Notion sign-in configured yet.",
+    !status.oauthAvailable
+  );
+  elements.connect.disabled = !status.oauthAvailable;
+}
+
+// Opens Notion's own consent screen in a tab, then waits for the backend to
+// finish the exchange. The extension only ever learns the session token.
+async function connectNotion() {
+  elements.connect.disabled = true;
+  showStatus("Opening Notion…");
+
+  try {
+    const { authorizeUrl, state: handshakeState } = await postJson("/api/auth/notion/start", {});
+    await chrome.tabs.create({ url: authorizeUrl });
+    showStatus("Waiting for you to approve access in Notion…");
+
+    const claimed = await pollForSession(handshakeState);
+    if (!claimed) {
+      showStatus("That took too long. Try connecting again.", true);
+      elements.connect.disabled = false;
+      return;
+    }
+
+    await writeSessionToken(claimed.sessionToken);
+    showStatus(`Connected to ${claimed.workspaceName}.`);
+
+    if (claimed.needsDatabaseSetup) {
+      elements.connect.textContent = "Choose databases";
+      elements.connect.onclick = () => openSetup();
+      elements.connect.disabled = false;
+      return;
+    }
+
+    elements.connect.hidden = true;
+    const captured = await capture();
+    if (captured) await analyze();
+  } catch (error) {
+    showStatus(error.message, true);
+    elements.connect.disabled = false;
+  }
+}
+
+async function pollForSession(handshakeState) {
+  const deadline = Date.now() + 5 * 60 * 1000;
+
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const result = await getJson(
+      `/api/auth/notion/claim?state=${encodeURIComponent(handshakeState)}`
+    );
+    if (result.status === "connected") return result;
+    if (result.status === "expired") return undefined;
+  }
+
+  return undefined;
+}
+
+function openSetup() {
+  chrome.tabs.create({ url: `${apiBaseUrl}/setup?session=${encodeURIComponent(state.sessionToken ?? "")}` });
 }
 
 async function capture() {
@@ -879,12 +977,39 @@ async function save() {
   }
 }
 
+// The session token identifies which Notion workspace the backend should use.
+// It is opaque - the extension never holds a Notion token itself, so nothing
+// here can reach Notion directly even if the popup is compromised.
+async function readSessionToken() {
+  const stored = await chrome.storage.local.get("sessionToken");
+  return stored.sessionToken ?? undefined;
+}
+
+async function writeSessionToken(sessionToken) {
+  await chrome.storage.local.set({ sessionToken });
+  state.sessionToken = sessionToken;
+}
+
+async function authHeaders() {
+  const sessionToken = state.sessionToken ?? (await readSessionToken());
+  return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+}
+
+async function getJson(path) {
+  const response = await fetch(`${apiBaseUrl}${path}`, { headers: await authHeaders() });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || `Request failed (${response.status}).`);
+  }
+  return payload;
+}
+
 async function postJson(path, body) {
   let response;
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify(body)
     });
   } catch {

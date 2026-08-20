@@ -170,7 +170,9 @@ const githubRepo: SourceAdapter = {
     }
   },
 
-  notionType: "Website"
+  // Must match the option in the Notion Type select exactly, including its
+  // spelling. Notion matches select options by name, not by any id.
+  notionType: "Github Repos"
 };
 
 // Academic publishers that reliably serve Highwire Press citation_* meta tags.
@@ -229,7 +231,7 @@ const researchPaper: SourceAdapter = {
     }
   },
 
-  notionType: "Article"
+  notionType: "Research Paper"
 };
 
 // The fallback: anything on the web no other adapter claimed. Whether it is an

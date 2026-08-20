@@ -122,26 +122,33 @@ test("rebuilds a canonical URL from the detected identity", () => {
   assert.equal(canonicalUrlFor({ sourceType: "website", id: null }), null);
 });
 
-// Every value here must be an option that exists in the Notion Type select.
-// Sending one that does not is a hard 400, not a silent no-op.
+// Every value here must be an option that exists in the Notion Type select,
+// spelled exactly as Notion spells it - Notion matches select options by name,
+// and sending one that does not exist is a hard 400, not a silent no-op. If
+// this list drifts from the real database, saving breaks, so it is worth
+// re-reading the live schema rather than editing this from memory.
 test("maps every source type onto an existing Notion Type option", () => {
   const existingNotionOptions = new Set([
     "Article",
     "Video",
     "YouTube Channel",
     "Website",
-    "PDF"
+    "PDF",
+    "Github Repos",
+    "Research Paper"
   ]);
 
-  for (const sourceType of [
-    "youtube_video",
-    "youtube_channel",
-    "github_repo",
-    "article",
-    "website",
-    "research_paper"
-  ] as const) {
-    const notionType = notionTypeFor(sourceType);
+  const expected: Record<string, string> = {
+    youtube_video: "Video",
+    youtube_channel: "YouTube Channel",
+    github_repo: "Github Repos",
+    research_paper: "Research Paper",
+    article: "Article",
+    website: "Website"
+  };
+
+  for (const [sourceType, notionType] of Object.entries(expected)) {
+    assert.equal(notionTypeFor(sourceType as never), notionType, sourceType);
     assert.ok(
       existingNotionOptions.has(notionType),
       `${sourceType} maps to "${notionType}", which is not an option in the Type select`

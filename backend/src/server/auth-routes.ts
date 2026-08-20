@@ -7,12 +7,15 @@
 // from a request to "the" workspace any more.
 import { AppError } from "../../../shared/types/errors.js";
 import {
+  accessTokenFor,
   connectionForSession,
+  deleteConnectionAndData,
   deleteSession,
   setDataSourceRoles,
   type DataSourceRoles
 } from "../auth/connections.js";
-import { accessTokenFor } from "../auth/connections.js";
+import { deleteCorrectionsForConnection } from "../v1/corrections.js";
+import { clearNotionTaxonomyCache } from "../notion/taxonomy.js";
 import { discoverDataSources } from "../auth/discover.js";
 import {
   claimAuthorization,
@@ -139,8 +142,21 @@ export async function handleAuthRoute(
     };
   }
 
+  // Disconnect means gone, not just logged out: the token, the database
+  // mapping, and every correction record this connection produced are all
+  // deleted here, not archived. If the person reconnects later they start
+  // from a blank slate, which is the honest version of "disconnect".
   if (method === "POST" && pathname === "/api/auth/disconnect") {
-    if (sessionToken) await deleteSession(sessionToken);
+    const connection = await connectionForSession(sessionToken);
+
+    if (connection) {
+      await deleteCorrectionsForConnection(connection.id);
+      clearNotionTaxonomyCache(connection.id);
+      await deleteConnectionAndData(connection.id);
+    } else if (sessionToken) {
+      await deleteSession(sessionToken);
+    }
+
     return { statusCode: 200, body: { ok: true } };
   }
 

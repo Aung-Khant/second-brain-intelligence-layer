@@ -38,11 +38,15 @@ const elements = {
   whySaved: document.getElementById("why-saved"),
   whyRequired: document.querySelector(".why__required"),
   save: document.getElementById("save"),
-  connect: document.getElementById("connect")
+  connect: document.getElementById("connect"),
+  account: document.getElementById("account"),
+  accountWorkspace: document.getElementById("account-workspace"),
+  disconnect: document.getElementById("disconnect")
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   elements.save.addEventListener("click", save);
+  elements.disconnect.addEventListener("click", disconnectNotion);
   elements.whySaved.addEventListener("input", updateSaveState);
 
   for (const kind of kinds) {
@@ -97,6 +101,13 @@ async function start() {
     return;
   }
 
+  // Only a real connection can be disconnected - the env fallback has no
+  // stored token or session to remove.
+  if (status.connected) {
+    elements.account.hidden = false;
+    elements.accountWorkspace.textContent = status.workspaceName ?? "Notion connected";
+  }
+
   if (status.needsDatabaseSetup) {
     showStatus("Finish choosing your databases to start saving.", true);
     elements.connect.hidden = false;
@@ -131,7 +142,12 @@ async function connectNotion() {
 
   try {
     const { authorizeUrl, state: handshakeState } = await postJson("/api/auth/notion/start", {});
-    await chrome.tabs.create({ url: authorizeUrl });
+    // The landing page, not the raw Notion URL - it explains what is about to
+    // happen and, if a template is configured, gets the workspace into a
+    // shape where the next step (matching databases) can auto-complete.
+    await chrome.tabs.create({
+      url: `${apiBaseUrl}/start?authorize=${encodeURIComponent(authorizeUrl)}`
+    });
     showStatus("Waiting for you to approve access in Notion…");
 
     const claimed = await pollForSession(handshakeState);
@@ -178,6 +194,24 @@ async function pollForSession(handshakeState) {
 
 function openSetup() {
   chrome.tabs.create({ url: `${apiBaseUrl}/setup?session=${encodeURIComponent(state.sessionToken ?? "")}` });
+}
+
+// Deletes the token, the database mapping, and every correction record this
+// connection produced on the server, then clears the local session
+// regardless of whether that call succeeds - a friend who wants to leave
+// should not be stuck connected just because a network request failed.
+async function disconnectNotion() {
+  elements.disconnect.disabled = true;
+
+  try {
+    await postJson("/api/auth/disconnect", {});
+  } catch {
+    // Proceed to clear locally anyway - see comment above.
+  }
+
+  state.sessionToken = undefined;
+  await chrome.storage.local.remove("sessionToken");
+  window.location.reload();
 }
 
 async function capture() {

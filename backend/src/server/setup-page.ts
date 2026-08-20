@@ -49,6 +49,9 @@ export function renderSetupPage(): string {
     <p id="msg"></p>
   </div>
   <p id="loading">Loading your databases…</p>
+  <button id="disconnect" type="button" style="margin-top:28px;background:transparent;color:#a8452a;border:1px solid rgba(168,69,42,.35)">
+    Disconnect and delete my data
+  </button>
 </main>
 <script>
   // The session arrives in the URL because this page is opened by the
@@ -133,6 +136,21 @@ export function renderSetupPage(): string {
   });
 
   load();
+
+  document.getElementById("disconnect").addEventListener("click", async () => {
+    if (!confirm("Delete your Notion connection and all correction history? This cannot be undone.")) return;
+
+    const button = document.getElementById("disconnect");
+    button.disabled = true;
+    await fetch("/api/auth/disconnect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + session },
+      body: "{}"
+    });
+
+    document.querySelector("main").innerHTML =
+      '<h1>Disconnected</h1><p class="lede">Your data has been deleted. You can close this tab.</p>';
+  });
 </script>
 </body>
 </html>`;

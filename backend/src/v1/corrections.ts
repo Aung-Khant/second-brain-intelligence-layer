@@ -6,8 +6,8 @@
 // convention. The retrieval interface below is the seam for real relevance
 // ranking later; right now it does keyword overlap on purpose, so the vertical
 // slice works without an embedding store.
-import { appendFile, mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type {
   ClassificationCandidate,
   ClassificationResult,
@@ -29,6 +29,12 @@ export type CorrectionHint = {
 
 const logDirectory = "correction-logs";
 const logFileName = "corrections.jsonl";
+
+// Overridable so tests can point this at a throwaway directory instead of the
+// real project log - the same reasoning as CONNECTIONS_STORE_PATH.
+function logFilePath(): string {
+  return process.env.CORRECTIONS_LOG_PATH || join(process.cwd(), logDirectory, logFileName);
+}
 
 export function buildCorrectionRecords(input: {
   connectionId: string;
@@ -96,11 +102,11 @@ export function buildCorrectionRecords(input: {
 export async function appendCorrectionRecords(records: CorrectionRecord[]): Promise<void> {
   if (records.length === 0) return;
 
-  const directory = join(process.cwd(), logDirectory);
-  await mkdir(directory, { recursive: true });
+  const path = logFilePath();
+  await mkdir(dirname(path), { recursive: true });
 
   const lines = records.map((record) => JSON.stringify(record)).join("\n");
-  await appendFile(join(directory, logFileName), `${lines}\n`);
+  await appendFile(path, `${lines}\n`);
 }
 
 // Step 9's interface. Deliberately keyword-based: the point right now is that
@@ -158,9 +164,26 @@ function overlapScore(entityName: string, terms: Set<string>): number {
   return words.reduce((score, word) => (terms.has(word) ? score + 1 : score), 0);
 }
 
+// Called from disconnect. Disconnecting is meant to leave no trace, so this
+// physically rewrites the file rather than marking rows deleted - there is no
+// "soft delete" here for someone to recover from.
+export async function deleteCorrectionsForConnection(connectionId: string): Promise<void> {
+  const all = await readCorrectionRecords();
+  const remaining = all.filter((record) => record.connectionId !== connectionId);
+  if (remaining.length === all.length) return;
+
+  const path = logFilePath();
+  const temporaryPath = `${path}.${process.pid}.tmp`;
+  const lines = remaining.map((record) => JSON.stringify(record)).join("\n");
+
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(temporaryPath, remaining.length ? `${lines}\n` : "");
+  await rename(temporaryPath, path);
+}
+
 async function readCorrectionRecords(): Promise<CorrectionRecord[]> {
   try {
-    const contents = await readFile(join(process.cwd(), logDirectory, logFileName), "utf8");
+    const contents = await readFile(logFilePath(), "utf8");
     return contents
       .split("\n")
       .filter((line) => line.trim())

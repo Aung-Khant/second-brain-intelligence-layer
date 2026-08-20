@@ -15,7 +15,12 @@
 // so the confidence thresholds live in exactly one place; this file renders
 // what it is told and does not re-derive them.
 
-const apiBaseUrl = "http://127.0.0.1:3737";
+// Set in config.js, which is the single file to edit when pointing this at a
+// hosted backend instead of your own machine.
+const apiBaseUrl =
+  typeof SECOND_BRAIN_API_BASE_URL === "string"
+    ? SECOND_BRAIN_API_BASE_URL
+    : "http://127.0.0.1:3737";
 
 const state = {
   sessionToken: undefined,

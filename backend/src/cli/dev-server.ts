@@ -4,7 +4,7 @@
 import { loadDotEnv } from "../config/env.js";
 import { startDevServer } from "../server/dev-server.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
-import { hasLocalEnvConfig, readNotionTaxonomyConfig } from "../notion/config.js";
+import { localEnvFallbackEnabled, readNotionTaxonomyConfig } from "../notion/config.js";
 
 loadDotEnv();
 startDevServer();
@@ -13,6 +13,6 @@ startDevServer();
 // warm on their owner's first request instead - there is no "the" workspace to
 // prefetch any more, and eagerly reading every stored connection at boot would
 // hit Notion on behalf of people who are not using the server right now.
-if (hasLocalEnvConfig()) {
+if (localEnvFallbackEnabled()) {
   void fetchNotionTaxonomy(readNotionTaxonomyConfig()).catch(() => undefined);
 }

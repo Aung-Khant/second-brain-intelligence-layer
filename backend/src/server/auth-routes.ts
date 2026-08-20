@@ -25,7 +25,7 @@ import {
 } from "../auth/notion-oauth.js";
 import {
   configForConnection,
-  hasLocalEnvConfig,
+  localEnvFallbackEnabled,
   notionVersion,
   readNotionTaxonomyConfig,
   type NotionTaxonomyConfig
@@ -46,8 +46,10 @@ export async function resolveNotionConfig(
   }
 
   // Single-user development fallback. Only reachable when no session was
-  // presented at all, so it can never override or leak into a real connection.
-  if (!sessionToken && hasLocalEnvConfig()) {
+  // presented at all AND the owner explicitly opted in via
+  // ALLOW_LOCAL_ENV_FALLBACK - otherwise an anonymous request on a shared
+  // server would be served the owner's workspace.
+  if (!sessionToken && localEnvFallbackEnabled()) {
     return readNotionTaxonomyConfig();
   }
 
@@ -76,7 +78,7 @@ export async function handleAuthRoute(
       body: {
         connected: Boolean(connection),
         oauthAvailable: isOAuthConfigured(),
-        localFallback: !sessionToken && hasLocalEnvConfig(),
+        localFallback: !sessionToken && localEnvFallbackEnabled(),
         workspaceName: connection?.workspaceName ?? null,
         needsDatabaseSetup: Boolean(connection && !connection.roles)
       }

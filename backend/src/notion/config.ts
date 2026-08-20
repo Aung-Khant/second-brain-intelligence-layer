@@ -54,6 +54,20 @@ export function hasLocalEnvConfig(): boolean {
   return Boolean(process.env.NOTION_API_KEY?.trim());
 }
 
+// The env fallback must now be opted into explicitly. Before this gate, any
+// request that arrived without a session was silently served the OWNER's
+// workspace whenever the server had NOTION_API_KEY set - which meant a friend
+// who installed the extension and never connected saved straight into the
+// owner's Notion. Off by default so a shared server always sends new people
+// through onboarding; the owner sets ALLOW_LOCAL_ENV_FALLBACK=true in .env to
+// keep the sessionless local-dev path working on their own machine.
+export function localEnvFallbackEnabled(): boolean {
+  return (
+    hasLocalEnvConfig() &&
+    process.env.ALLOW_LOCAL_ENV_FALLBACK?.trim().toLowerCase() === "true"
+  );
+}
+
 export function readNotionTaxonomyConfig(): NotionTaxonomyConfig {
   return {
     apiKey: requireEnv("NOTION_API_KEY"),

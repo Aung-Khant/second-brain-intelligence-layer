@@ -20,6 +20,7 @@ import {
 } from "../../../shared/schemas/captured-resource.js";
 import { AppError } from "../../../shared/types/errors.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
+import type { NotionTaxonomyConfig } from "../notion/config.js";
 import { classifyAgainstTaxonomy } from "./classify.js";
 import { enrichGitHubRepo } from "./enrich-github.js";
 import {
@@ -77,7 +78,14 @@ export function selectionStateFor(confidence: number): SelectionState {
   return "unselected";
 }
 
-export async function analyzeResource(input: AnalyzeRequest): Promise<AnalyzeResponse> {
+// Every entry point now takes the caller's Notion config rather than reading a
+// global one. This is the single change that makes the server multi-user: two
+// requests with different sessions touch different workspaces, and nothing in
+// the pipeline below can accidentally reach for "the" workspace.
+export async function analyzeResource(
+  input: AnalyzeRequest,
+  config: NotionTaxonomyConfig
+): Promise<AnalyzeResponse> {
   assertCapturedResource(input?.resource);
   // Enrichment runs before pass 1 because it improves what pass 1 reads. It is
   // a no-op for every source that carries its own metadata.
@@ -87,11 +95,11 @@ export async function analyzeResource(input: AnalyzeRequest): Promise<AnalyzeRes
   // Only pass 2 needs both. On a cold Notion cache this removes a full
   // round-trip from the user's wait.
   const [taxonomy, understanding] = await Promise.all([
-    fetchNotionTaxonomy(),
+    fetchNotionTaxonomy(config),
     understandResource(resource)
   ]);
 
-  const hints = await retrieveRelevantCorrections(understanding);
+  const hints = await retrieveRelevantCorrections(understanding, config.connectionId);
   const classification = await classifyAgainstTaxonomy(
     resource,
     understanding,
@@ -107,7 +115,10 @@ export async function analyzeResource(input: AnalyzeRequest): Promise<AnalyzeRes
   };
 }
 
-export async function saveAnalyzedResource(input: SaveRequest): Promise<SaveResponse> {
+export async function saveAnalyzedResource(
+  input: SaveRequest,
+  config: NotionTaxonomyConfig
+): Promise<SaveResponse> {
   assertCapturedResource(input?.resource);
   const resource = normalizeCapturedResource(input.resource);
 
@@ -129,7 +140,7 @@ export async function saveAnalyzedResource(input: SaveRequest): Promise<SaveResp
   const selection = normalizeSelection(input.selection);
   const classification = normalizeClassification(input.classification);
 
-  const result = await saveVideoResource({
+  const result = await saveVideoResource(config, {
     name,
     url: resource.canonicalUrl ?? resource.url,
     sourceType: resource.sourceType,
@@ -147,7 +158,8 @@ export async function saveAnalyzedResource(input: SaveRequest): Promise<SaveResp
         resourceUrl: resource.canonicalUrl ?? resource.url,
         classification,
         selection,
-        entityNamesById: await taxonomyNamesById()
+        connectionId: config.connectionId,
+        entityNamesById: await taxonomyNamesById(config)
       })
     );
   }
@@ -173,8 +185,8 @@ function withState(candidate: ClassificationCandidate): ScoredCandidate {
 // Manually added entities arrive as bare IDs, so their names come from the
 // cached taxonomy rather than the request - the correction log should record
 // what the entity actually is, not what the client claimed.
-async function taxonomyNamesById(): Promise<Map<string, string>> {
-  const taxonomy = await fetchNotionTaxonomy();
+async function taxonomyNamesById(config: NotionTaxonomyConfig): Promise<Map<string, string>> {
+  const taxonomy = await fetchNotionTaxonomy(config);
   return new Map(
     [...taxonomy.areas, ...taxonomy.projects, ...taxonomy.topics].map((entity) => [
       entity.id,

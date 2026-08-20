@@ -7,63 +7,67 @@
 import type { Area, Project, ProjectStatus, Taxonomy, Topic } from "../../../shared/types/taxonomy.js";
 import { assertTaxonomy } from "../../../shared/schemas/validation.js";
 import { NotionClient, getCheckbox, getRelationIds, getRichText, getStatus, getTitle } from "./client.js";
-import { readNotionTaxonomyConfig } from "./config.js";
+import type { NotionTaxonomyConfig } from "./config.js";
 
 const defaultTaxonomyCacheTtlMs = 10 * 60 * 1000;
 
-let cachedTaxonomy:
-  | {
-      expiresAt: number;
-      taxonomy: Taxonomy;
-    }
-  | undefined;
+// Keyed by connection id. A single shared cache was fine when the server knew
+// one workspace; with several connected it would serve one person's Areas to
+// another, which is a correctness and a privacy bug at once.
+const cachedTaxonomies = new Map<string, { expiresAt: number; taxonomy: Taxonomy }>();
+const pendingTaxonomyFetches = new Map<string, Promise<Taxonomy>>();
 
-let pendingTaxonomyFetch: Promise<Taxonomy> | undefined;
-
-export async function fetchNotionTaxonomy(): Promise<Taxonomy> {
-  const now = Date.now();
-  if (cachedTaxonomy && cachedTaxonomy.expiresAt > now) {
-    return cachedTaxonomy.taxonomy;
+export async function fetchNotionTaxonomy(config: NotionTaxonomyConfig): Promise<Taxonomy> {
+  const key = config.connectionId;
+  const cached = cachedTaxonomies.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.taxonomy;
   }
 
-  if (pendingTaxonomyFetch) {
-    return pendingTaxonomyFetch;
-  }
+  const inFlight = pendingTaxonomyFetches.get(key);
+  if (inFlight) return inFlight;
 
-  pendingTaxonomyFetch = fetchFreshNotionTaxonomy()
+  const fetchPromise = fetchFreshNotionTaxonomy(config)
     .then((taxonomy) => {
-      cachedTaxonomy = {
+      cachedTaxonomies.set(key, {
         taxonomy,
         expiresAt: Date.now() + readTaxonomyCacheTtlMs()
-      };
+      });
       return taxonomy;
     })
     .finally(() => {
-      pendingTaxonomyFetch = undefined;
+      pendingTaxonomyFetches.delete(key);
     });
 
-  return pendingTaxonomyFetch;
+  pendingTaxonomyFetches.set(key, fetchPromise);
+  return fetchPromise;
 }
 
-export function clearNotionTaxonomyCache(): void {
-  cachedTaxonomy = undefined;
-  pendingTaxonomyFetch = undefined;
+export function clearNotionTaxonomyCache(connectionId?: string): void {
+  if (!connectionId) {
+    cachedTaxonomies.clear();
+    pendingTaxonomyFetches.clear();
+    return;
+  }
+
+  cachedTaxonomies.delete(connectionId);
+  pendingTaxonomyFetches.delete(connectionId);
 }
 
 export function readNotionTaxonomyCacheStatus(): {
-  cached: boolean;
-  expiresAt?: string;
+  cachedConnections: number;
   ttlMs: number;
 } {
-  return {
-    cached: Boolean(cachedTaxonomy && cachedTaxonomy.expiresAt > Date.now()),
-    expiresAt: cachedTaxonomy ? new Date(cachedTaxonomy.expiresAt).toISOString() : undefined,
-    ttlMs: readTaxonomyCacheTtlMs()
-  };
+  const now = Date.now();
+  let live = 0;
+  for (const entry of cachedTaxonomies.values()) {
+    if (entry.expiresAt > now) live += 1;
+  }
+
+  return { cachedConnections: live, ttlMs: readTaxonomyCacheTtlMs() };
 }
 
-async function fetchFreshNotionTaxonomy(): Promise<Taxonomy> {
-  const config = readNotionTaxonomyConfig();
+async function fetchFreshNotionTaxonomy(config: NotionTaxonomyConfig): Promise<Taxonomy> {
   const client = new NotionClient(config);
 
   const [areaPages, topicPages, projectPages] = await Promise.all([

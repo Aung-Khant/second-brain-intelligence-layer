@@ -12,7 +12,7 @@
 import { AppError } from "../../../shared/types/errors.js";
 import type { EntityType } from "../../../shared/types/captured-resource.js";
 import { NotionClient } from "../notion/client.js";
-import { readNotionTaxonomyConfig } from "../notion/config.js";
+import type { NotionTaxonomyConfig } from "../notion/config.js";
 import { clearNotionTaxonomyCache, fetchNotionTaxonomy } from "../notion/taxonomy.js";
 
 export type CreateEntityInput = {
@@ -34,7 +34,10 @@ const labels: Record<EntityType, string> = {
   topic: "Topic"
 };
 
-export async function createTaxonomyEntity(input: CreateEntityInput): Promise<CreatedEntity> {
+export async function createTaxonomyEntity(
+  input: CreateEntityInput,
+  config: NotionTaxonomyConfig
+): Promise<CreatedEntity> {
   const entityType = input?.entityType;
   if (entityType !== "area" && entityType !== "project" && entityType !== "topic") {
     throw new AppError("UNSUPPORTED_RESOURCE", "Unknown entity type.");
@@ -45,12 +48,11 @@ export async function createTaxonomyEntity(input: CreateEntityInput): Promise<Cr
   // Reuse an existing entity when the name already matches. Two Areas called
   // "Computer Science" is a worse outcome than a no-op, and the user can't see
   // the whole taxonomy from the popup to know it was already there.
-  const existing = await findExisting(entityType, name);
+  const existing = await findExisting(entityType, name, config);
   if (existing) {
     return { entityType, ...existing, created: false };
   }
 
-  const config = readNotionTaxonomyConfig();
   const client = new NotionClient(config);
 
   try {
@@ -62,7 +64,7 @@ export async function createTaxonomyEntity(input: CreateEntityInput): Promise<Cr
 
     // Drop the cache so the new entity is selectable immediately rather than
     // after the TTL expires.
-    clearNotionTaxonomyCache();
+    clearNotionTaxonomyCache(config.connectionId);
 
     return { entityType, id: page.id, name, url: page.url, created: true };
   } catch (error) {
@@ -76,9 +78,10 @@ export async function createTaxonomyEntity(input: CreateEntityInput): Promise<Cr
 
 async function findExisting(
   entityType: EntityType,
-  name: string
+  name: string,
+  config: NotionTaxonomyConfig
 ): Promise<{ id: string; name: string; url: string } | undefined> {
-  const taxonomy = await fetchNotionTaxonomy();
+  const taxonomy = await fetchNotionTaxonomy(config);
   const pool =
     entityType === "area"
       ? taxonomy.areas
@@ -90,10 +93,7 @@ async function findExisting(
   return match ? { id: match.id, name: match.name, url: "" } : undefined;
 }
 
-function dataSourceIdFor(
-  entityType: EntityType,
-  config: ReturnType<typeof readNotionTaxonomyConfig>
-): string {
+function dataSourceIdFor(entityType: EntityType, config: NotionTaxonomyConfig): string {
   if (entityType === "area") return config.areasDataSourceId;
   if (entityType === "project") return config.projectsDataSourceId;
   return config.topicsDataSourceId;

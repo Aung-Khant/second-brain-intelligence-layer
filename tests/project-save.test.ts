@@ -9,6 +9,19 @@ test("creates a Project page with default template properties", async () => {
   let requestBody: Record<string, unknown> | undefined;
 
   process.env.NOTION_API_KEY = "test-notion-key";
+  // The four data source ids used to have hardcoded fallbacks pointing at one
+
+  // specific demo workspace, which is what made this single-user. They are
+
+  // required now, so tests state them explicitly.
+
+  process.env.NOTION_AREAS_DATA_SOURCE_ID = "areas-ds";
+
+  process.env.NOTION_TOPICS_DATA_SOURCE_ID = "topics-ds";
+
+  process.env.NOTION_PROJECTS_DATA_SOURCE_ID = "projects-ds";
+
+  process.env.NOTION_RESOURCES_DATA_SOURCE_ID = "resources-ds";
   clearNotionTaxonomyCache();
 
   globalThis.fetch = async (_input, init) => {
@@ -60,6 +73,10 @@ test("returns the Notion create error detail when Project creation fails", async
   const previousFetch = globalThis.fetch;
 
   process.env.NOTION_API_KEY = "test-notion-key";
+  process.env.NOTION_AREAS_DATA_SOURCE_ID = "areas-ds";
+  process.env.NOTION_TOPICS_DATA_SOURCE_ID = "topics-ds";
+  process.env.NOTION_PROJECTS_DATA_SOURCE_ID = "projects-ds";
+  process.env.NOTION_RESOURCES_DATA_SOURCE_ID = "resources-ds";
   clearNotionTaxonomyCache();
 
   globalThis.fetch = async () =>

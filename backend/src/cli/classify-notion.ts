@@ -4,6 +4,7 @@
 import { classifyResource } from "../ai/classify-resource.js";
 import { loadDotEnv } from "../config/env.js";
 import { fetchNotionTaxonomy } from "../notion/taxonomy.js";
+import { readNotionTaxonomyConfig } from "../notion/config.js";
 import { readJsonArgumentOrStdin } from "./read-json.js";
 import type { TrustedResourceInput } from "../../../shared/types/resource.js";
 
@@ -14,7 +15,7 @@ type CliInput = {
 loadDotEnv();
 
 const input = (await readJsonArgumentOrStdin()) as CliInput;
-const taxonomy = await fetchNotionTaxonomy();
+const taxonomy = await fetchNotionTaxonomy(readNotionTaxonomyConfig());
 const output = classifyResource({
   resource: input.resource,
   taxonomy

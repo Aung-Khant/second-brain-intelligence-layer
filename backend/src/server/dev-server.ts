@@ -27,6 +27,10 @@ import {
   type SaveRequest
 } from "../v1/api.js";
 import { createTaxonomyEntity, type CreateEntityInput } from "../v1/create-entity.js";
+import { bearerToken, handleAuthRoute, resolveNotionConfig } from "./auth-routes.js";
+import { completeAuthorization } from "../auth/notion-oauth.js";
+import { renderCallbackPage } from "./callback-page.js";
+import { renderSetupPage } from "./setup-page.js";
 
 type JsonResponse = {
   statusCode: number;
@@ -37,6 +41,24 @@ const defaultPort = 3737;
 
 export function createDevServer(): http.Server {
   return http.createServer(async (request, response) => {
+    const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+
+    // Notion redirects a real browser here, so this one route answers with a
+    // page rather than JSON. It is also the only place that ever sees an
+    // authorization code.
+    if (url.pathname === "/api/auth/notion/callback") {
+      const html = await renderCallbackPage(url.searchParams, completeAuthorization);
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(html);
+      return;
+    }
+
+    if (url.pathname === "/setup") {
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(renderSetupPage());
+      return;
+    }
+
     const result = await routeHttpRequest(request);
     writeJson(response, result.statusCode, result.body);
   });
@@ -45,13 +67,25 @@ export function createDevServer(): http.Server {
 export async function handleApiRequest(
   method: string,
   pathname: string,
-  body: unknown = {}
+  body: unknown = {},
+  context: { sessionToken?: string; query?: URLSearchParams } = {}
 ): Promise<JsonResponse> {
   if (method === "OPTIONS") {
     return { statusCode: 204, body: null };
   }
 
+  const query = context.query ?? new URLSearchParams();
+  const sessionToken = context.sessionToken;
+
   try {
+    const authRoute = await handleAuthRoute(
+      method,
+      pathname,
+      query,
+      (body ?? {}) as Record<string, unknown>,
+      sessionToken
+    );
+    if (authRoute) return authRoute;
     if (method === "GET" && pathname === "/health") {
       return {
         statusCode: 200,
@@ -66,21 +100,27 @@ export async function handleApiRequest(
     if (method === "POST" && pathname === "/api/resource/analyze") {
       return {
         statusCode: 200,
-        body: await analyzeResource(body as AnalyzeRequest)
+        body: await analyzeResource(body as AnalyzeRequest, await resolveNotionConfig(sessionToken))
       };
     }
 
     if (method === "POST" && pathname === "/api/resource/save") {
       return {
         statusCode: 200,
-        body: await saveAnalyzedResource(body as SaveRequest)
+        body: await saveAnalyzedResource(
+          body as SaveRequest,
+          await resolveNotionConfig(sessionToken)
+        )
       };
     }
 
     if (method === "POST" && pathname === "/api/taxonomy/create") {
       return {
         statusCode: 200,
-        body: await createTaxonomyEntity(body as CreateEntityInput)
+        body: await createTaxonomyEntity(
+          body as CreateEntityInput,
+          await resolveNotionConfig(sessionToken)
+        )
       };
     }
 
@@ -148,9 +188,13 @@ export async function handleApiRequest(
 }
 
 async function routeHttpRequest(request: http.IncomingMessage): Promise<JsonResponse> {
-  const pathname = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`).pathname;
+  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
   const body = request.method === "POST" ? await readJsonBody(request) : {};
-  return handleApiRequest(request.method ?? "GET", pathname, body);
+
+  return handleApiRequest(request.method ?? "GET", url.pathname, body, {
+    sessionToken: bearerToken(request.headers as Record<string, string | undefined>),
+    query: url.searchParams
+  });
 }
 
 function toErrorResponse(error: unknown): JsonResponse {
@@ -203,7 +247,9 @@ async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
 
 function writeJson(response: http.ServerResponse, statusCode: number, body: unknown): void {
   response.writeHead(statusCode, {
-    "Access-Control-Allow-Headers": "Content-Type",
+    // Authorization carries the session token; without it here the browser
+    // blocks every authenticated call at the preflight.
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Origin": "*",
     "Content-Type": "application/json"

@@ -15,7 +15,7 @@ import { AppError } from "../../../shared/types/errors.js";
 import type { SourceType } from "../../../shared/types/captured-resource.js";
 import { notionTypeFor } from "../../../shared/capture/source.js";
 import { NotionClient } from "../notion/client.js";
-import { readNotionTaxonomyConfig } from "../notion/config.js";
+import type { NotionTaxonomyConfig } from "../notion/config.js";
 import { findDuplicateResource } from "../notion/save-resource.js";
 import { normalizeResourceUrl } from "../notion/url.js";
 
@@ -37,8 +37,10 @@ export type SavedResource = {
   resourceUrl: string;
 };
 
-export async function saveVideoResource(input: VideoResourceToSave): Promise<SavedResource> {
-  const config = readNotionTaxonomyConfig();
+export async function saveVideoResource(
+  config: NotionTaxonomyConfig,
+  input: VideoResourceToSave
+): Promise<SavedResource> {
   const client = new NotionClient(config);
   const normalizedUrl = normalizeResourceUrl(input.url);
 

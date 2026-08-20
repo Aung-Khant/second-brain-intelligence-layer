@@ -39,6 +39,13 @@ test("classify endpoint uses local matching for instant results", async () => {
   process.env.AI_PROVIDER = "openrouter";
   process.env.OPENROUTER_API_KEY = "test-openrouter-key";
   process.env.NOTION_API_KEY = "test-notion-key";
+  // The four data source ids used to have hardcoded fallbacks pointing at one
+  // specific demo workspace, which is what made this single-user. They are
+  // required now, so tests state them explicitly.
+  process.env.NOTION_AREAS_DATA_SOURCE_ID = "areas-ds";
+  process.env.NOTION_TOPICS_DATA_SOURCE_ID = "topics-ds";
+  process.env.NOTION_PROJECTS_DATA_SOURCE_ID = "projects-ds";
+  process.env.NOTION_RESOURCES_DATA_SOURCE_ID = "resources-ds";
   process.env.NOTION_TAXONOMY_CACHE_TTL_MS = "0";
 
   globalThis.fetch = async () =>
@@ -78,6 +85,10 @@ test("taxonomy endpoint returns picker data from Notion taxonomy", async () => {
   const previousFetch = globalThis.fetch;
 
   process.env.NOTION_API_KEY = "test-notion-key";
+  process.env.NOTION_AREAS_DATA_SOURCE_ID = "areas-ds";
+  process.env.NOTION_TOPICS_DATA_SOURCE_ID = "topics-ds";
+  process.env.NOTION_PROJECTS_DATA_SOURCE_ID = "projects-ds";
+  process.env.NOTION_RESOURCES_DATA_SOURCE_ID = "resources-ds";
   process.env.NOTION_TAXONOMY_CACHE_TTL_MS = "0";
 
   globalThis.fetch = async (input) => {

@@ -35,6 +35,7 @@ test("maps confidence onto the three selection bands", () => {
 // This is the exact scenario from the MVP spec's expected success case.
 test("records accepted, rejected, and manually added decisions", () => {
   const records = buildCorrectionRecords({
+    connectionId: "conn-test",
     resourceId: "notion-page-1",
     resourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     classification,
@@ -68,6 +69,7 @@ test("records accepted, rejected, and manually added decisions", () => {
 
 test("records nothing when there were no suggestions and no selections", () => {
   const records = buildCorrectionRecords({
+    connectionId: "conn-test",
     resourceId: "notion-page-2",
     resourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     classification: { areas: [], projects: [], topics: [] },

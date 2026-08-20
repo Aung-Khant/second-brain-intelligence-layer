@@ -443,6 +443,10 @@ body {
   opacity: 0.85;
 }
 
+.button--connect {
+  width: 100%;
+}
+
 .button:disabled {
   opacity: 0.35;
   cursor: not-allowed;

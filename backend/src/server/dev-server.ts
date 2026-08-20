@@ -31,6 +31,7 @@ import { bearerToken, handleAuthRoute, resolveNotionConfig } from "./auth-routes
 import { completeAuthorization } from "../auth/notion-oauth.js";
 import { renderCallbackPage } from "./callback-page.js";
 import { renderSetupPage } from "./setup-page.js";
+import { renderStartPage } from "./start-page.js";
 
 type JsonResponse = {
   statusCode: number;
@@ -56,6 +57,27 @@ export function createDevServer(): http.Server {
     if (url.pathname === "/setup") {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       response.end(renderSetupPage());
+      return;
+    }
+
+    // The friendly landing page for "Connect Notion" - explains what's about
+    // to happen and, if configured, points at the template before the actual
+    // Notion consent screen.
+    //
+    // The extension is what mints the OAuth `state` (via /api/auth/notion/
+    // start) because it is also what polls for the result afterward. This
+    // page never generates its own - it only carries the authorizeUrl through
+    // as a query param - because a second, independent handshake here would
+    // have no way to hand its result back to whoever is waiting for it.
+    if (url.pathname === "/start") {
+      const authorizeUrl = url.searchParams.get("authorize");
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(
+        renderStartPage({
+          authorizeUrl,
+          templateUrl: process.env.NOTION_TEMPLATE_URL?.trim() || null
+        })
+      );
       return;
     }
 

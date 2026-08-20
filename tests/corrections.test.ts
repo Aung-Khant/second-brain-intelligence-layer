@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
-import { buildCorrectionRecords } from "../backend/src/v1/corrections.js";
+import {
+  appendCorrectionRecords,
+  buildCorrectionRecords,
+  deleteCorrectionsForConnection,
+  retrieveRelevantCorrections
+} from "../backend/src/v1/corrections.js";
 import { selectionStateFor } from "../backend/src/v1/api.js";
 import type { ClassificationResult } from "../shared/types/captured-resource.js";
 
@@ -78,4 +86,92 @@ test("records nothing when there were no suggestions and no selections", () => {
   });
 
   assert.equal(records.length, 0);
+});
+
+async function withLogFile<T>(run: (path: string) => Promise<T>): Promise<T> {
+  const previous = process.env.CORRECTIONS_LOG_PATH;
+  const directory = await mkdtemp(join(tmpdir(), "sbil-corrections-"));
+  const path = join(directory, "corrections.jsonl");
+  process.env.CORRECTIONS_LOG_PATH = path;
+
+  try {
+    return await run(path);
+  } finally {
+    if (previous === undefined) delete process.env.CORRECTIONS_LOG_PATH;
+    else process.env.CORRECTIONS_LOG_PATH = previous;
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+test("retrieval only ever sees one connection's own corrections", async () => {
+  await withLogFile(async () => {
+    await appendCorrectionRecords(
+      buildCorrectionRecords({
+        connectionId: "conn-alice",
+        resourceId: "r1",
+        resourceUrl: "https://example.com/1",
+        classification: { areas: [], projects: [], topics: [] },
+        selection: { areaIds: [], projectIds: [], topicIds: ["topic-x"] },
+        entityNamesById: new Map([["topic-x", "Retrieval"]])
+      })
+    );
+    await appendCorrectionRecords(
+      buildCorrectionRecords({
+        connectionId: "conn-bob",
+        resourceId: "r2",
+        resourceUrl: "https://example.com/2",
+        classification: { areas: [], projects: [], topics: [] },
+        selection: { areaIds: [], projectIds: [], topicIds: ["topic-x"] },
+        entityNamesById: new Map([["topic-x", "Retrieval"]])
+      })
+    );
+
+    const understanding = {
+      summary: "A video about retrieval systems.",
+      coreIdeas: ["retrieval"],
+      likelyUseCases: [],
+      contentCategory: "video"
+    };
+
+    const aliceHints = await retrieveRelevantCorrections(understanding, "conn-alice");
+    const bobHints = await retrieveRelevantCorrections(understanding, "conn-bob");
+    const strangerHints = await retrieveRelevantCorrections(understanding, "conn-nobody");
+
+    assert.equal(aliceHints.length, 1);
+    assert.equal(bobHints.length, 1);
+    assert.equal(strangerHints.length, 0);
+  });
+});
+
+// The disconnect guarantee on the corrections side: deleting one connection's
+// data must not touch anyone else's history sharing the same log file.
+test("deleting a connection's corrections leaves other connections intact", async () => {
+  await withLogFile(async (path) => {
+    await appendCorrectionRecords(
+      buildCorrectionRecords({
+        connectionId: "conn-alice",
+        resourceId: "r1",
+        resourceUrl: "https://example.com/1",
+        classification: { areas: [], projects: [], topics: [] },
+        selection: { areaIds: [], projectIds: [], topicIds: ["topic-x"] },
+        entityNamesById: new Map([["topic-x", "Retrieval"]])
+      })
+    );
+    await appendCorrectionRecords(
+      buildCorrectionRecords({
+        connectionId: "conn-bob",
+        resourceId: "r2",
+        resourceUrl: "https://example.com/2",
+        classification: { areas: [], projects: [], topics: [] },
+        selection: { areaIds: [], projectIds: [], topicIds: ["topic-y"] },
+        entityNamesById: new Map([["topic-y", "Chemistry"]])
+      })
+    );
+
+    await deleteCorrectionsForConnection("conn-alice");
+
+    const onDisk = await readFile(path, "utf8");
+    assert.ok(!onDisk.includes("conn-alice"), "alice's data survived deletion");
+    assert.ok(onDisk.includes("conn-bob"), "bob's data was deleted along with alice's");
+  });
 });

@@ -11,6 +11,7 @@ import {
   accessTokenFor,
   connectionForSession,
   createConnection,
+  deleteConnectionAndData,
   deleteSession,
   resetConnectionCacheForTests,
   setDataSourceRoles
@@ -162,5 +163,34 @@ test("re-authorizing the same workspace reuses it and keeps its databases", asyn
     assert.equal(second.connection.roles?.areasDataSourceId, "areas-1");
     assert.equal(await accessTokenFor(second.connection.id), "token-2");
     assert.notEqual(second.sessionToken, first.sessionToken);
+  });
+});
+
+// The disconnect guarantee: gone means gone, not just logged out. A leftover
+// token or an orphaned session that still resolves would quietly undermine
+// "disconnect and delete my data".
+test("deleting a connection removes the token and every session pointing at it", async () => {
+  await withStore(async () => {
+    const alice = await createConnection({
+      accessToken: "token-alice",
+      workspaceId: "ws-alice",
+      workspaceName: "Alice",
+      botId: "bot-alice"
+    });
+    const bob = await createConnection({
+      accessToken: "token-bob",
+      workspaceId: "ws-bob",
+      workspaceName: "Bob",
+      botId: "bot-bob"
+    });
+
+    await deleteConnectionAndData(alice.connection.id);
+
+    assert.equal(await connectionForSession(alice.sessionToken), undefined);
+    await assert.rejects(() => accessTokenFor(alice.connection.id));
+
+    // Deleting one connection must not touch anyone else's.
+    assert.equal((await connectionForSession(bob.sessionToken))?.workspaceName, "Bob");
+    assert.equal(await accessTokenFor(bob.connection.id), "token-bob");
   });
 });

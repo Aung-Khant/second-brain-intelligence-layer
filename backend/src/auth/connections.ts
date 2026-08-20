@@ -157,6 +157,21 @@ export async function deleteSession(sessionToken: string): Promise<void> {
   await persist(store);
 }
 
+// Removes the connection itself - the encrypted token and every session
+// pointing at it - not just one session. "Disconnect" is meant to mean leave
+// no trace, and a friend using this for the first time should not have to
+// know the difference between logging out and actually being forgotten.
+export async function deleteConnectionAndData(connectionId: string): Promise<void> {
+  const store = await load();
+
+  delete store.connections[connectionId];
+  for (const [sessionToken, mappedId] of Object.entries(store.sessions)) {
+    if (mappedId === connectionId) delete store.sessions[sessionToken];
+  }
+
+  await persist(store);
+}
+
 // Never let the encrypted token escape this module, even in an object nobody
 // currently serializes - the next person to add a debug log should not be able
 // to leak it by accident.

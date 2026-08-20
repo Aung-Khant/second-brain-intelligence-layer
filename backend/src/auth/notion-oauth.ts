@@ -14,7 +14,8 @@
 //      once. Claiming consumes the pending record, so a leaked `state` is
 //      useless after the first claim and expires regardless.
 import { AppError } from "../../../shared/types/errors.js";
-import { createConnection, type NotionConnection } from "./connections.js";
+import { createConnection, setDataSourceRoles, type NotionConnection } from "./connections.js";
+import { discoverDataSources } from "./discover.js";
 import { newOpaqueToken } from "./crypto.js";
 
 const pendingTtlMs = 10 * 60 * 1000;
@@ -115,12 +116,35 @@ export async function completeAuthorization(
     );
   }
 
-  const { connection, sessionToken } = await createConnection({
+  let { connection, sessionToken } = await createConnection({
     accessToken: body.access_token,
     workspaceId: body.workspace_id ?? "",
     workspaceName: body.workspace_name ?? "Notion workspace",
     botId: body.bot_id ?? body.workspace_id ?? newOpaqueToken()
   });
+
+  // If the four databases can be matched by name with no ambiguity - which is
+  // exactly what happens when someone duplicated the template rather than
+  // building their own layout - skip the manual picker entirely. This is the
+  // whole point of pointing people at a template: matching names is what
+  // turns setup from a form into nothing.
+  if (!connection.roles) {
+    try {
+      const discovery = await discoverDataSources(
+        body.access_token,
+        process.env.NOTION_VERSION || "2026-03-11"
+      );
+      if (discovery.complete) {
+        connection = await setDataSourceRoles(
+          connection.id,
+          discovery.suggested as Required<typeof discovery.suggested>
+        );
+      }
+    } catch {
+      // Discovery is an optimization, not a requirement - the /setup picker
+      // is still there if this fails for any reason.
+    }
+  }
 
   pending.set(state, { createdAt: record.createdAt, result: { sessionToken, connection } });
 

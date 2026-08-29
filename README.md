@@ -1,168 +1,56 @@
 # Second Brain Intelligence Layer
 
-## MVP: save a YouTube video to your Second Brain
+A Chrome extension and Node backend for capturing useful material into a
+Notion Second Brain. It extracts facts from the current page, uses AI to
+understand the resource, suggests relationships to the user's existing Areas,
+Projects, and Topics, and saves only after the user reviews the result.
 
-The current build is one end-to-end path: open a YouTube video, click the
-extension, review the suggested Areas/Projects/Topics, say why you saved it, and
-write it to Notion.
+The current capture flow supports:
 
-Requires a Notion key and an AI key in `.env` — see the sections below.
+- YouTube videos and channels
+- GitHub repositories
+- Research papers, including arXiv and common academic publishers
+- Articles and general web pages
 
-```bash
-npm run server
-```
+## How It Works
 
-Then load `extension/` as an unpacked extension (`chrome://extensions` →
-Developer mode → Load unpacked). Open a YouTube video, click the extension, and
-press **Analyze**.
+1. Open a supported page and click the extension.
+2. The extension captures deterministic metadata from the page.
+3. The backend summarizes the resource and matches it against the connected
+   Notion workspace's Areas, Projects, and Topics.
+4. Review the suggestions, add or remove relationships, and write **Why Saved**.
+5. Save the confirmed Resource to Notion.
 
-What you get:
+AI suggestions never write directly to Notion. Existing taxonomy is matched by
+ID, new Areas or Topics require an explicit user action, and new Projects can
+only be created manually. Corrections are recorded locally so future ranking
+can be evaluated without polluting the Notion databases.
 
-- Entities at 0.90 confidence and above are checked for you.
-- Entities from 0.70 to 0.89 are shown unchecked as suggestions.
-- Anything weaker is left out. Empty is a valid, expected answer.
-- You can uncheck anything, or add any existing Area, Project, or Topic by name.
-- The extension cannot create new taxonomy. That is deliberate.
-- **Why Saved** is yours. Nothing writes it for you.
+## Requirements
 
-Every suggestion is compared against what you actually chose and appended to
-`correction-logs/corrections.jsonl` (gitignored, local only) as one row per
-entity: `accepted`, `rejected`, or `manually_added`. Notion holds clean
-knowledge; that file holds the evidence of how you think.
+- Node.js 20 or newer
+- Chrome or another Chromium browser
+- A Notion workspace containing Areas, Projects, Topics, and Resources databases
+- An OpenRouter or OpenAI API key
 
-Only YouTube videos are supported. Articles, channels, and PDFs are not.
+## Local Development
 
----
-
-## Legacy V0
-
-Everything below documents the earlier V0 pipeline (`/api/classify`,
-`/api/enhance`, the CLI classifiers, and the gold-dataset evaluation). It still
-works, but the MVP flow above does not use it.
-
-V0 tests one hypothesis: can AI-like classification organize a trusted web resource into an existing Second Brain while preserving human meaning?
-
-This milestone intentionally implements only:
-
-- shared internal schemas
-- mock taxonomy
-- resource understanding
-- relationship classification (local rule-based, with optional AI Enhance)
-- structured output validation
-- CLI/test harness
-- Notion taxonomy reads, cached in memory
-- confirmed Resource saves into Notion, with user-approved Area and Topic creation
-- local Chrome extension MVP
-
-## Setup
+Install dependencies and create a local environment file:
 
 ```bash
 npm install
-npm test
+cp .env.example .env
 ```
 
-## Run The Classifier
-
-```bash
-npm run build
-node dist/backend/src/cli/classify.js tests/fixtures/3blue1brown-channel.json
-```
-
-You can also pass JSON through stdin:
-
-```bash
-cat tests/fixtures/3blue1brown-channel.json | node dist/backend/src/cli/classify.js
-```
-
-## Evaluate Gold Dataset
-
-```bash
-npm run evaluate
-```
-
-## Use Real Notion Taxonomy
-
-Create a local `.env` file with your Notion token:
-
-```bash
-NOTION_API_KEY=your_secret_token
-```
-
-Then fetch the current taxonomy from Notion:
-
-```bash
-npm run taxonomy:notion
-```
-
-Classify one fixture against real Notion Areas, Topics, and active Projects:
-
-```bash
-npm run classify:notion -- tests/gold-dataset/thirty-days-of-python.json
-```
-
-Evaluate the gold dataset against real Notion:
-
-```bash
-npm run evaluate:notion
-```
-
-If `evaluate:notion` fails, that usually means the gold fixture expectations and your real Notion taxonomy use different labels or the Notion entries need richer definitions.
-
-## Save A Resource Into Notion
-
-Dry-run a Resource save without creating a Notion page:
-
-```bash
-npm run save:notion -- tests/fixtures/save-resource.json
-```
-
-Create the Resource only after reviewing the payload:
-
-```bash
-npm run save:notion -- tests/fixtures/save-resource.json --confirm-write
-```
-
-## Run The Extension MVP
-
-Start the local API server:
-
-```bash
-npm run server
-```
-
-Then load the extension in Chrome:
-
-1. Open `chrome://extensions`.
-2. Turn on Developer mode.
-3. Choose Load unpacked.
-4. Select the `extension` folder in this repo.
-5. Open a normal web page, click the extension, classify, review, and save.
-
-The extension talks to `http://127.0.0.1:3737`, so keep `npm run server` running while using it.
-
-The server caches your Notion Areas, Topics, and Projects in memory for 10 minutes. This makes repeated classification faster because Notion is not refetched on every click. Restarting the server clears the cache.
-
-You can change or disable the cache with:
-
-```bash
-NOTION_TAXONOMY_CACHE_TTL_MS=600000
-```
-
-Use `0` to disable the cache while editing your taxonomy heavily.
-
-## Enable AI Classification
-
-By default, the local server uses the rule-based classifier so the extension works without any external AI call.
-
-To enable OpenRouter classification, add these values to `.env`:
+Choose one AI provider in `.env`:
 
 ```bash
 AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash
+OPENROUTER_MODEL=google/gemini-2.5-flash-lite
 ```
 
-You can also use OpenAI directly:
+Or use OpenAI:
 
 ```bash
 AI_PROVIDER=openai
@@ -170,28 +58,117 @@ OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5-mini
 ```
 
-Then restart the local API server:
+Then configure Notion using one of the two modes below and start the backend:
 
 ```bash
 npm run server
 ```
 
-The main `Classify` button is intentionally fast and local-first. It uses the cached Notion taxonomy and does not wait for AI. Use `AI Enhance` only when you want a better summary, Save Intent, Why Saved, or suggested new Topics.
+Load the extension:
 
-When AI Enhance succeeds, the extension shows an `AI` badge beside the summary. If the AI request fails, the server falls back to local matching and the popup tells you local matching was used.
+1. Open `chrome://extensions`.
+2. Enable Developer mode.
+3. Click **Load unpacked**.
+4. Select the `extension/` directory.
+5. Open a supported page and click **Second Brain Capture**.
 
-AI can suggest new Topics when no existing Topic fits. Nothing is created automatically — suggested Topics have an explicit create action in the extension. Clicking `Create Topic` creates a Topic page in Notion with the default Topic template, links it to the suggested Area when available, clears the local taxonomy cache, and selects the new Topic for the Resource you are reviewing.
+The extension uses `http://127.0.0.1:3737` by default. The server must remain
+running while the extension is in use.
 
-Areas work the same way. The popup shows the top suggested Area first; `Accept suggestion` selects an existing Area, and `Create suggested Area` creates a new Area page in Notion when the suggestion doesn't match anything you already have. You can also open the manual picker to choose a different Area, type your own new Area name, or skip Area assignment entirely for this save.
+## Notion Connection
 
-AI never suggests a new Project — it only ever matches against your existing active Projects. If the right Project genuinely doesn't exist yet, choose `+ New Project...` in the manual Project picker to create one directly (name only, using your Projects database's default template), the same way `+ New Topic...` works.
+### OAuth mode
 
-The Type field (Webpage, Article, YouTube Video, YouTube Channel) is auto-detected from the URL by default, but it's a normal dropdown — change it yourself if the detection guessed wrong before you Suggest or Save.
+OAuth is the normal path and is required when more than one person uses the
+backend. Create a public Notion integration, then set:
 
-The extension also includes manual Area, Topic, and Project pickers sourced from your Notion databases. Confidence scores are only suggestions; you can uncheck them, add the correct database item manually, and then save your final selection.
+```bash
+NOTION_OAUTH_CLIENT_ID=
+NOTION_OAUTH_CLIENT_SECRET=
+NOTION_OAUTH_REDIRECT_URI=http://127.0.0.1:3737/api/auth/notion/callback
+TOKEN_ENCRYPTION_KEY=
+```
 
-## Topic Auto-Selection
+Generate the encryption key with:
 
-Topics are scored independently, so a resource that genuinely relates to more than one Topic can have more than one auto-checked. Any Topic scored 90 or above is auto-checked outright. If none reach that bar, the extension auto-checks the closest cluster near the top score (within 10 confidence points) instead of just the single best match, so closely related Topics don't require an extra manual click. Topics well below the top score stay unchecked for manual review.
+```bash
+openssl rand -hex 32
+```
 
-For YouTube pages, the extension now also captures the channel name from the page and sends it as `creator`, giving both local matching and AI Enhance one more real signal to match against your taxonomy.
+When the extension opens, click **Connect Notion**. The backend discovers the
+workspace's databases and suggests mappings for Areas, Projects, Topics, and
+Resources. Exact conventional names can be mapped automatically; otherwise the
+user confirms them during setup.
+
+To offer a duplicable Second Brain before authorization, publish the Notion
+template with duplication enabled and set `NOTION_TEMPLATE_URL`.
+
+See [docs/SHARING.md](docs/SHARING.md) for public integration setup, hosting,
+persistent storage, extension configuration, and privacy considerations.
+
+### Single-user local mode
+
+The original internal-integration setup remains available for local development
+only. It is disabled by default so a sessionless request cannot accidentally
+write into the server owner's workspace.
+
+```bash
+ALLOW_LOCAL_ENV_FALLBACK=true
+NOTION_API_KEY=your_internal_integration_token
+NOTION_AREAS_DATA_SOURCE_ID=
+NOTION_TOPICS_DATA_SOURCE_ID=
+NOTION_PROJECTS_DATA_SOURCE_ID=
+NOTION_RESOURCES_DATA_SOURCE_ID=
+```
+
+Do not enable `ALLOW_LOCAL_ENV_FALLBACK` on a shared server.
+
+## Suggestion Behavior
+
+- Confidence of `0.90` or higher is selected automatically.
+- Confidence from `0.70` through `0.89` is shown as an unchecked suggestion.
+- Lower-confidence matches are omitted from the initial result.
+- Empty matches are valid; the user can add any existing taxonomy item manually.
+- **Why Saved** is required and remains human-authored.
+- Duplicate detection and source identity checks run before a write.
+
+The taxonomy cache defaults to ten minutes. Override it with
+`NOTION_TAXONOMY_CACHE_TTL_MS`; set the value to `0` to disable caching.
+
+## Development Commands
+
+```bash
+npm run build          # compile TypeScript
+npm test               # compile and run the test suite
+npm run server         # compile and start the API on port 3737
+npm run evaluate       # evaluate the legacy gold dataset
+npm run evaluate:notion
+```
+
+## Project Structure
+
+```text
+backend/src/v1/       current analyze, classify, save, and correction flow
+backend/src/auth/     Notion OAuth connections and encrypted token storage
+backend/src/notion/   Notion taxonomy reads and writes
+backend/src/server/   HTTP API and onboarding pages
+extension/            unpacked Chrome extension
+shared/               capture adapters, schemas, and shared types
+tests/                unit and integration-style tests
+docs/                 architecture, decisions, philosophy, and sharing guide
+```
+
+## Legacy V0
+
+The earlier classifier and CLI pipeline remains available for experiments and
+evaluation. It is not the path used by the current extension.
+
+```bash
+npm run taxonomy:notion
+npm run classify:notion -- tests/gold-dataset/thirty-days-of-python.json
+npm run save:notion -- tests/fixtures/save-resource.json
+npm run save:notion -- tests/fixtures/save-resource.json --confirm-write
+```
+
+For implementation boundaries and the legacy module map, see
+[docs/architecture.md](docs/architecture.md).
